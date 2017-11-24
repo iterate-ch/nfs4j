@@ -305,14 +305,7 @@ public class NFS4Client {
 
         NFS4State state = new NFS4State(openState, stateOwner, _stateHandler.createStateId(this, _stateIdCounter.incrementAndGet()));
         if (openState != null) {
-            openState.addDisposeListener(s -> {
-                // remove and dispose derived states.
-                NFS4State nfsState = _clientStates.remove(state.stateid());
-                if (nfsState != null) {
-                    _log.debug("removing derived state {}", nfsState);
-                    nfsState.tryDispose();
-                }
-            });
+            openState.addDisposeListener(s -> state.tryDispose());
         }
         _clientStates.put(state.stateid(), state);
         return state;
