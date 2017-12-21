@@ -116,6 +116,9 @@ public class OperationREADDIR extends AbstractNFSv4Operation {
         entry4 lastEntry = null;
 
         int fcount = 0;
+        if (!dirList.hasNext()) {
+            res.resok4.reply.eof = true;
+        }
         while (dirList.hasNext()) {
 
             DirectoryEntry le = dirList.next();
@@ -129,7 +132,6 @@ public class OperationREADDIR extends AbstractNFSv4Operation {
                 continue;
             }
 
-            fcount++;
             Inode ei = le.getInode();
 
             entry4 currentEntry = new entry4();
@@ -152,6 +154,7 @@ public class OperationREADDIR extends AbstractNFSv4Operation {
                 res.resok4.reply.eof = false;
                 break;
             }
+            fcount++;
             dircount += newDirSize;
             currcount += newSize;
 
