@@ -840,6 +840,9 @@ public class NfsServerV3 extends nfs3_protServerStub {
             int fcount = 0;
             entry3 lastEntry = null;
 
+            if (!dirList.hasNext()) {
+                res.resok.reply.eof = true;
+            }
             while (dirList.hasNext()) {
 
                 DirectoryEntry le = dirList.next();

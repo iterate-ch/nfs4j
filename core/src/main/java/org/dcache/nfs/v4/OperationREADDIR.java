@@ -116,6 +116,9 @@ public class OperationREADDIR extends AbstractNFSv4Operation {
         entry4 lastEntry = null;
 
         int fcount = 0;
+        if (!dirList.hasNext()) {
+            res.resok4.reply.eof = true;
+        }
         while (dirList.hasNext()) {
 
             DirectoryEntry le = dirList.next();
