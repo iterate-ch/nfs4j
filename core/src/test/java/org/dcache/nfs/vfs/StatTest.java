@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import org.junit.Ignore;
@@ -31,17 +32,18 @@ public class StatTest {
         localCal.set(Calendar.MILLISECOND, 0);
         stat.setMTime(localCal.getTimeInMillis());
         stat.setMode(0755 | Stat.S_IFDIR);
-        assertEquals("drwxr-xr-x    7    1    2    3 Feb 01 14:15", stat.toString());
+        SimpleDateFormat formatter = new SimpleDateFormat("MMM dd HH:mm");
+        assertEquals("drwxr-xr-x    7    1    2    3 "+formatter.format(localCal.getTime()), stat.toString());
         stat.setMode(0401 | Stat.S_IFREG);
         stat.setNlink(6666);
         stat.setSize(1024*16);
         localCal.set(Calendar.DAY_OF_MONTH, 29);
         localCal.set(Calendar.HOUR_OF_DAY, 1);
         stat.setMTime(localCal.getTimeInMillis());
-        assertEquals("-r-------x 6666    1    2  16K Mar 01 01:15", stat.toString());
+        assertEquals("-r-------x 6666    1    2  16K "+formatter.format(localCal.getTime()), stat.toString());
         stat.setMode(0070 | Stat.S_IFLNK);
         stat.setSize(1024*1024*1024*1024L - 1); //one byte short of 1TB
-        assertEquals("l---rwx--- 6666    1    2 1024G Mar 01 01:15", stat.toString());
+        assertEquals("l---rwx--- 6666    1    2 1024G "+formatter.format(localCal.getTime()), stat.toString());
     }
 
     @Test
@@ -52,7 +54,8 @@ public class StatTest {
         assertEquals("1K",Stat.sizeToString(1024));
         assertEquals("1K",Stat.sizeToString(1024+1));
         assertEquals("1K",Stat.sizeToString(1024+51));
-        assertEquals("1.1K",Stat.sizeToString(1024+52)); //just after 1.05, round up
+        // localized format to handle ',' vs '.' (German vs US English)
+        assertEquals(String.format("%.1fK", 1.1),Stat.sizeToString(1024+52)); //just after 1.05, round up
         assertEquals("1024M",Stat.sizeToString(1024*1024*1024-1));
         assertEquals("1G",Stat.sizeToString(1024*1024*1024));
         assertEquals("8E",Stat.sizeToString(Long.MAX_VALUE));
@@ -88,72 +91,67 @@ public class StatTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedNotDefeinedGetDev() {
+    public void testNotDefinedGetDev() {
         new Stat().getDev();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetIno() {
+    public void testNotDefinedGetIno() {
         new Stat().getIno();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetMode() {
+    public void testNotDefinedGetMode() {
         new Stat().getMode();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetNlink() {
+    public void testNotDefinedGetNlink() {
         new Stat().getNlink();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetUid() {
+    public void testNotDefinedGetUid() {
         new Stat().getUid();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetGid() {
+    public void testNotDefinedGetGid() {
         new Stat().getGid();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetRdev() {
+    public void testNotDefinedGetRdev() {
         new Stat().getRdev();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetSize() {
+    public void testNotDefinedGetSize() {
         new Stat().getSize();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetATime() {
+    public void testNotDefinedGetATime() {
         new Stat().getATime();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetMTime() {
+    public void testNotDefinedGetMTime() {
         new Stat().getMTime();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetCTime() {
+    public void testNotDefinedGetCTime() {
         new Stat().getCTime();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetFileId() {
-        new Stat().getFileId();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedGetGeneration() {
+    public void testNotDefinedGetGeneration() {
         new Stat().getGeneration();
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNotDefeinedType() {
+    public void testNotDefinedType() {
         new Stat().type();
     }
 
@@ -162,6 +160,11 @@ public class StatTest {
         Stat stat = new Stat();
         stat.setDev(1);
         assertEquals(1, stat.getDev());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testNotDefinedGetBtime() {
+        new Stat().getBTime();
     }
 
     @Test
@@ -238,17 +241,17 @@ public class StatTest {
     }
 
     @Test
-    public void testGetFileId() {
-        Stat stat = new Stat();
-        stat.setFileid(1);
-        assertEquals(1, stat.getFileId());
-    }
-
-    @Test
     public void testGetGeneration() {
         Stat stat = new Stat();
         stat.setGeneration(1);
         assertEquals(1, stat.getGeneration());
+    }
+
+    @Test
+    public void testGetBtime() {
+        Stat stat = new Stat();
+        stat.setBTime(1);
+        assertEquals(1, stat.getBTime());
     }
 
     @Test

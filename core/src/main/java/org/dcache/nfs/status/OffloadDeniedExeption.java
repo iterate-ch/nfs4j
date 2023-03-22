@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2021 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2023 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -17,38 +17,27 @@
  * details); if not, write to the Free Software Foundation, Inc.,
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-package org.dcache.nfs.v3.xdr;
-import org.dcache.oncrpc4j.rpc.OncRpcException;
-import org.dcache.oncrpc4j.xdr.XdrAble;
-import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
-import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
-import java.io.IOException;
+package org.dcache.nfs.status;
 
-public class gid3 implements XdrAble {
+import static org.dcache.nfs.nfsstat.NFS4ERR_OFFLOAD_DENIED;
 
-    public int value;
+import org.dcache.nfs.ChimeraNFSException;
 
-    public gid3() {
+public class OffloadDeniedExeption extends ChimeraNFSException {
+
+    public OffloadDeniedExeption() {
+        super(NFS4ERR_OFFLOAD_DENIED);
     }
 
-    public gid3(int value) {
-        this.value = value;
+    public OffloadDeniedExeption(String msg) {
+        super(NFS4ERR_OFFLOAD_DENIED, msg);
     }
 
-    public gid3(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
-        xdrDecode(xdr);
+    public OffloadDeniedExeption(String msg, Throwable cause) {
+        super(NFS4ERR_OFFLOAD_DENIED, msg, cause);
     }
 
-    public void xdrEncode(XdrEncodingStream xdr)
-           throws OncRpcException, IOException {
-        xdr.xdrEncodeInt(value);
+    public OffloadDeniedExeption(Throwable cause) {
+        super(NFS4ERR_OFFLOAD_DENIED, cause);
     }
-
-    public void xdrDecode(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
-        value = xdr.xdrDecodeInt();
-    }
-
 }
-// End of gid3.java

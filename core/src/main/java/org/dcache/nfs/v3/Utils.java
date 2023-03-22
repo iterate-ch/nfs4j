@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2015 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2022 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,6 +19,8 @@
  */
 package org.dcache.nfs.v3;
 
+import org.dcache.nfs.status.AccessException;
+import org.dcache.nfs.status.NameTooLongException;
 import org.dcache.nfs.v3.xdr.fattr3;
 import org.dcache.nfs.v3.xdr.fileid3;
 import org.dcache.nfs.v3.xdr.ftype3;
@@ -46,14 +48,14 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 
-public class HimeraNfsUtils {
+public class Utils {
 
 
 	private static final int MODE_MASK = 0770000;
 
-	private static final Logger _log = LoggerFactory.getLogger(HimeraNfsUtils.class);
+	private static final Logger _log = LoggerFactory.getLogger(Utils.class);
 
-    private HimeraNfsUtils() {
+    private Utils() {
         // no instance allowed
     }
 
@@ -66,10 +68,10 @@ public class HimeraNfsUtils {
         at.nlink= new uint32( stat.getNlink() );
 
         //public int uid;
-        at.uid= new uid3( new uint32(stat.getUid()) );
+        at.uid= new uid3(stat.getUid());
 
         //public int gid;
-        at.gid=new gid3(new uint32( stat.getGid()) );
+        at.gid=new gid3(stat.getGid());
 
         //public int rdev;
         at.rdev = new specdata3();
@@ -82,10 +84,10 @@ public class HimeraNfsUtils {
 
         //public int fileid;
         // Get some value for this file/dir
-        at.fileid = new fileid3(new uint64( stat.getFileId() ) );
+        at.fileid = new fileid3(new uint64(stat.getIno()));
 
-        at.size = new size3( new uint64( stat.getSize() ) );
-        at.used = new size3( new uint64( stat.getSize() ) );
+        at.size = new size3(stat.getSize());
+        at.used = new size3(stat.getSize());
 
         //public nfstime atime;
         at.atime = convertTimestamp(stat.getATime());
@@ -98,7 +100,7 @@ public class HimeraNfsUtils {
 
     public static void fill_attributes(Stat stat,  wcc_attr at) {
 
-        at.size = new size3( new uint64( stat.getSize() ) );
+        at.size = new size3(stat.getSize());
         //public nfstime mtime;
         at.mtime = convertTimestamp(stat.getMTime());
         //public nfstime ctime;
@@ -122,11 +124,11 @@ public class HimeraNfsUtils {
         long now = System.currentTimeMillis();
 
         if( s.uid.set_it ) {
-            stat.setUid( s.uid.uid.value.value);
+            stat.setUid( s.uid.uid.value);
         }
 
         if( s.gid.set_it ) {
-            stat.setGid(s.gid.gid.value.value);
+            stat.setGid(s.gid.gid.value);
         }
 
         if( s.mode.set_it  ) {
@@ -136,7 +138,7 @@ public class HimeraNfsUtils {
         }
 
         if( s.size.set_it ) {
-            stat.setSize( s.size.size.value.value);
+            stat.setSize( s.size.size.value);
         }
 
    /*     switch( s.atime.set_it ) {
@@ -232,5 +234,24 @@ public class HimeraNfsUtils {
         wccData.after = defaultPostOpAttr();
         wccData.before = defaultPreOpAttr();
         return wccData;
+    }
+
+    /**
+     * Validate ${code filename} requirements.
+     * @param filename
+     * @throws AccessException if filename does not meet expected constrains
+     * @throws NameTooLongException if filename is longer than negotiated with PATHCONF operation.
+     */
+    public static void checkFilename(String filename) throws AccessException, NameTooLongException {
+
+        // FIXME: merge with NFSv4 defaults
+        if (filename.length() > 256) {
+            throw new NameTooLongException();
+        }
+
+        if (filename.length() == 0 || filename.indexOf('/') != -1 || filename.indexOf('\0') != -1 ) {
+            throw new AccessException();
+        }
+
     }
 }

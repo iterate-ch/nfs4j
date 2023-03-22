@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2012 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2021 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -58,7 +58,7 @@ public class nfsace4 implements XdrAble {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        switch (type.value.value) {
+        switch (type.value) {
             case nfs4_prot.ACE4_ACCESS_ALLOWED_ACE_TYPE:
                 sb.append('A');
                 break;
@@ -76,11 +76,27 @@ public class nfsace4 implements XdrAble {
         }
 
         sb.append(':');
-        // flag
+
+        if ((flag.value & nfs4_prot.ACE4_FILE_INHERIT_ACE) == nfs4_prot.ACE4_FILE_INHERIT_ACE) {
+            sb.append('f');
+        }
+
+        if ((flag.value & nfs4_prot.ACE4_DIRECTORY_INHERIT_ACE) == nfs4_prot.ACE4_DIRECTORY_INHERIT_ACE) {
+            sb.append('d');
+        }
+
+        if ((flag.value & nfs4_prot.ACE4_INHERIT_ONLY_ACE) == nfs4_prot.ACE4_INHERIT_ONLY_ACE) {
+            sb.append('i');
+        }
+
+        if ((flag.value & nfs4_prot.ACE4_IDENTIFIER_GROUP) == nfs4_prot.ACE4_IDENTIFIER_GROUP) {
+            sb.append('g');
+        }
+
         sb.append(':');
         sb.append(who);
         sb.append(':');
-        sb.append(acemask4.toString(access_mask.value.value));
+        sb.append(acemask4.toString(access_mask.value));
         return sb.toString();
     }
 }
