@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -45,8 +46,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>11</java.version>
-  </properties>
+        <java.version>11</java.version>
+    </properties>
 
     <build>
         <extensions>
@@ -74,9 +75,9 @@
 
                     <showDeprecation>true</showDeprecation>
                     <release>${java.version}</release>
-                <!-- without forking compilation happens in the
-                same process, so no arguments are applied -->
-                <fork>true</fork>
+                    <!-- without forking compilation happens in the
+                    same process, so no arguments are applied -->
+                    <fork>true</fork>
                 </configuration>
             </plugin>
             <plugin>
@@ -205,12 +206,12 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
-                <version>1.2.3</version>
+                <version>1.2.12</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>24.1.1-jre</version>
+                <version>31.1-jre</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -220,17 +221,12 @@
             <dependency>
                 <groupId>org.dcache</groupId>
                 <artifactId>oncrpc4j-core</artifactId>
-                <version>3.1.0</version>
+                <version>3.3.0</version>
             </dependency>
             <dependency>
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
-                <version>3.9.2</version>
-            </dependency>
-            <dependency>
-                <groupId>com.hazelcast</groupId>
-                <artifactId>hazelcast-client</artifactId>
-                <version>3.9.2</version>
+                <version>4.1.10</version>
             </dependency>
             <dependency>
                 <groupId>com.sleepycat</groupId>
