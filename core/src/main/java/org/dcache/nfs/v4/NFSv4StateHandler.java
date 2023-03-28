@@ -250,14 +250,15 @@ public class NFSv4StateHandler {
             NFS4Client client = _clientsByServerId.get(clientId);
             if (client == null) {
                 final Optional<NFS4Client> first = _clientsByServerId.peek().findFirst();
-            if(first.isPresent()) {
-                final NFS4Client s = first.get();
-                _log.warn("Unknown client " + clientId + " returning " + s.getId());
-                return s;
+                if(first.isPresent()) {
+                    final NFS4Client s = first.get();
+                    _log.warn("Unknown client " + clientId + " returning " + s.getId());
+                    return s;
+                }
+                throw new BadStateidException("no client for stateid: " + stateId);
             }
-            throw new BadStateidException("no client for stateid: " + stateId);
-        }
-        return client;} finally {
+            return client;
+        } finally {
             _readLock.unlock();
         }
     }
