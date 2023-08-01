@@ -8,7 +8,7 @@
 
     <groupId>ch.iterate</groupId>
     <artifactId>nfs4j</artifactId>
-    <version>0.24.4-SNAPSHOT</version>
+    <version>0.26.0-SNAPSHOT</version>
     <name>Java based NFSv4.1 implementation</name>
     <packaging>pom</packaging>
 
@@ -61,7 +61,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>3.14.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -82,19 +82,19 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.4.2</version>
+                <version>3.0.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.maven.scm</groupId>
                         <artifactId>maven-scm-provider-gitexe</artifactId>
-                        <version>1.9</version>
+                        <version>2.0.1</version>
                     </dependency>
                 </dependencies>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>3.1.12</version>
+                <version>4.7.3.0</version>
                 <configuration>
                     <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
@@ -172,7 +172,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>31.1-jre</version>
+                <version>32.0.0-jre</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -187,7 +187,7 @@
             <dependency>
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
-                <version>4.1.10</version>
+                <version>5.3.0</version>
             </dependency>
             <dependency>
                 <groupId>com.sleepycat</groupId>
