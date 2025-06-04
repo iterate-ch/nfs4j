@@ -8,6 +8,8 @@ import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 import org.dcache.nfs.FsExport;
 import org.dcache.nfs.status.ExistException;
+import org.dcache.nfs.status.InvalException;
+import org.dcache.nfs.status.IsDirException;
 import org.dcache.nfs.status.NoEntException;
 import org.dcache.nfs.status.NotEmptyException;
 import org.dcache.nfs.status.NotSuppException;
@@ -460,7 +462,7 @@ public class LocalFileSystem implements VirtualFileSystem {
         Stat stat = new Stat();
 
         stat.setATime(attrs.lastAccessTime().toMillis());
-        stat.setCTime(attrs.creationTime().toMillis());
+        stat.setBTime(attrs.creationTime().toMillis());
         stat.setMTime(attrs.lastModifiedTime().toMillis());
 
         if (IS_UNIX) {
@@ -468,6 +470,7 @@ public class LocalFileSystem implements VirtualFileSystem {
             stat.setUid((Integer) Files.getAttribute(p, "unix:uid", NOFOLLOW_LINKS));
             stat.setMode((Integer) Files.getAttribute(p, "unix:mode", NOFOLLOW_LINKS));
             stat.setNlink((Integer) Files.getAttribute(p, "unix:nlink", NOFOLLOW_LINKS));
+            stat.setCTime(((FileTime) Files.getAttribute(p, "unix:ctime", NOFOLLOW_LINKS)).toMillis());
         } else {
             DosFileAttributes dosAttrs = (DosFileAttributes)attrs;
             stat.setGid(0);
@@ -481,7 +484,7 @@ public class LocalFileSystem implements VirtualFileSystem {
         stat.setIno(inodeNumber);
         stat.setRdev(17);
         stat.setSize(attrs.size());
-        stat.setGeneration(attrs.lastModifiedTime().toMillis());
+        stat.setGeneration(Math.max(stat.getCTime(), stat.getMTime()));
 
         return stat;
     }
@@ -534,6 +537,17 @@ public class LocalFileSystem implements VirtualFileSystem {
             }
         }
         if (stat.isDefined(Stat.StatAttribute.SIZE)) {
+
+            var currentAttributes = attributeView.readAttributes();
+
+            if (currentAttributes.isDirectory()) {
+                throw new IsDirException("set size on directory");
+            }
+
+            if (!Files.isRegularFile(path)) {
+                throw new InvalException("set size on non file object");
+            }
+
             try (RandomAccessFile raf = new RandomAccessFile(path.toFile(), "rw")) {
                 raf.setLength(stat.getSize());
             }

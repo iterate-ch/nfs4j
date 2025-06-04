@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2023 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -26,15 +26,18 @@ import com.google.common.io.BaseEncoding;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,6 +58,8 @@ import org.dcache.nfs.v4.xdr.sessionid4;
 import org.dcache.nfs.v4.xdr.state_owner4;
 import org.dcache.nfs.v4.xdr.verifier4;
 import org.dcache.nfs.util.Opaque;
+
+import javax.annotation.concurrent.GuardedBy;
 
 public class NFS4Client {
 
@@ -195,6 +200,11 @@ public class NFS4Client {
      */
     private final Clock _clock;
 
+    /**
+     * List of listeners to be notified when client is disposed.
+     */
+    private final List<DisposeListener<NFS4Client>> _disposeListeners = new ArrayList<>();
+
     public NFS4Client(NFSv4StateHandler stateHandler, clientid4 clientId, int minorVersion, InetSocketAddress clientAddress, InetSocketAddress localAddress,
             byte[] ownerID, verifier4 verifier, Principal principal, Duration leaseTime, boolean calbackNeeded) {
 
@@ -211,7 +221,7 @@ public class NFS4Client {
         _leaseTime = leaseTime;
         _callbackNeeded = calbackNeeded;
         _minorVersion = minorVersion;
-	_reclaim_completed = _minorVersion == 0; // no reclaim for NFSv4.0 clients
+        _reclaim_completed = _minorVersion == 0; // no reclaim for NFSv4.0 clients
         _log.debug("New client: {}", this);
     }
 
@@ -322,9 +332,9 @@ public class NFS4Client {
         return _sessionSequence;
     }
 
-    public NFS4State createState(StateOwner stateOwner, NFS4State openState) throws ChimeraNFSException {
+    private NFS4State createState(StateOwner stateOwner, byte type, NFS4State openState) throws ChimeraNFSException {
 
-        NFS4State state = new NFS4State(openState, stateOwner, _stateHandler.createStateId(this, _stateIdCounter.incrementAndGet()));
+        NFS4State state = new NFS4State(openState, stateOwner, _stateHandler.createStateId(this, type, _stateIdCounter.incrementAndGet()));
         if (openState != null) {
             openState.addDisposeListener(s -> {
                 // remove and dispose derived states.
@@ -340,8 +350,59 @@ public class NFS4Client {
         return state;
     }
 
-    public NFS4State createState(StateOwner stateOwner) throws ChimeraNFSException {
-        return createState(stateOwner, null);
+    /**
+     * Create a new open state.
+     * @param stateOwner state owner
+     * @return new open state.
+     * @throws ChimeraNFSException
+     */
+    public NFS4State createOpenState(StateOwner stateOwner) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.OPEN_STATE_ID, null);
+    }
+
+    /**
+     * Create a new lock state.
+     * @param stateOwner state owner
+     * @param openState open state to derive from
+     * @return new lock state.
+     * @throws ChimeraNFSException
+     */
+    public NFS4State createLockState(StateOwner stateOwner, NFS4State openState) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.LOCK_STATE_ID, openState);
+    }
+
+    /**
+     * Create a new layout state.
+     * @param stateOwner state owner
+     * @return new layout state.
+     * @throws ChimeraNFSException
+     */
+    public NFS4State createLayoutState(StateOwner stateOwner) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.LAYOUT_STATE_ID, null);
+    }
+
+    /**
+     * Create a new delegation state.
+     * @param stateOwner state owner.
+     * @return new delegation state.
+     * @throws ChimeraNFSException
+     */
+    public NFS4State createDelegationState(StateOwner stateOwner) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.DELEGATION_STATE_ID, null);
+    }
+
+    /**
+     * Create a new directory delegation state.
+     * @param stateOwner state owner.
+     * @return new directory delegation state.
+     * @throws ChimeraNFSException
+     */
+    public NFS4State createDirDelegationState(StateOwner stateOwner) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.DIR_DELEGATION_STATE_ID, null);
+    }
+
+    public NFS4State createServerSideCopyState(StateOwner stateOwner, NFS4State openState) throws ChimeraNFSException {
+        return createState(stateOwner, Stateids.SSC_STATE_ID, openState);
     }
 
     public void releaseState(stateid4 stateid) throws ChimeraNFSException {
@@ -487,7 +548,8 @@ public class NFS4Client {
         _clientStates.remove(state.stateid());
     }
 
-    private synchronized void drainStates() {
+    @GuardedBy("this")
+    private void drainStates() {
         Iterator<NFS4State> i = _clientStates.values().iterator();
         while (i.hasNext()) {
             NFS4State state = i.next();
@@ -500,8 +562,29 @@ public class NFS4Client {
      * Release resources used by this client if not released yet. Any subsequent
      * call will have no effect.
      */
-    public final void tryDispose() {
+    public synchronized final void tryDispose() throws ChimeraNFSException {
         drainStates();
+        Iterator<DisposeListener<NFS4Client>> i = _disposeListeners.iterator();
+        while(i.hasNext()) {
+            DisposeListener<NFS4Client> listener = i.next();
+            listener.notifyDisposed(this);
+            i.remove();
+        }
+    }
+
+    /**
+     * Release resources used by this client if not released yet. Ignore any errors.
+     */
+    public synchronized final void disposeIgnoreFailures() {
+        drainStates();
+        _disposeListeners.forEach( l -> {
+            try {
+                l.notifyDisposed(NFS4Client.this);
+            } catch (ChimeraNFSException e) {
+                _log.warn("failed to notify client dispose listener {} : {}",l , e.getMessage());
+            }
+        });
+        _disposeListeners.clear();
     }
 
     /**
@@ -578,5 +661,12 @@ public class NFS4Client {
         if (stateOwner == null) {
             throw new StaleClientidException();
         }
+    }
+
+    /**
+     * Add listener to be notified when client is disposed.
+     */
+    synchronized public void addDisposeListener(DisposeListener<NFS4Client> disposeListener) {
+        _disposeListeners.add(disposeListener);
     }
 }

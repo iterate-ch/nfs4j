@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2016 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -17,19 +17,24 @@
  * details); if not, write to the Free Software Foundation, Inc.,
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-package org.dcache.nfs.v4;
+package org.dcache.nfs.status;
 
+import static org.dcache.nfs.nfsstat.NFS4ERR_OFFLOAD_NO_REQS;
 import org.dcache.nfs.ChimeraNFSException;
 
-/**
- * Should be implemented by an object that wants to receive state dispose notifications.
- */
-public interface StateDisposeListener {
+public class OffloadNoReqsException extends ChimeraNFSException {
 
-    /**
-     * Called when specified {@link NFS4State} is disposed.
-     * @param state disposed state
-     * @throws ChimeraNFSException on errors.
-     */
-    void notifyDisposed(NFS4State state) throws ChimeraNFSException;
+    private static final long serialVersionUID = -5377367456693294221L;
+
+    public OffloadNoReqsException() {
+        super(NFS4ERR_OFFLOAD_NO_REQS);
+    }
+
+    public OffloadNoReqsException(String msg) {
+        super(NFS4ERR_OFFLOAD_NO_REQS, msg);
+    }
+
+    public OffloadNoReqsException(String msg, Throwable cause) {
+        super(NFS4ERR_OFFLOAD_NO_REQS, msg, cause);
+    }
 }

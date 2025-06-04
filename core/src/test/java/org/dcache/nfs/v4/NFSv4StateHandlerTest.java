@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2022 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -63,7 +63,7 @@ public class NFSv4StateHandlerTest {
 
     @Test
     public void testGetByStateId() throws Exception {
-        stateid4 state = _client.createState(_owner).stateid();
+        stateid4 state = _client.createOpenState(_owner).stateid();
         _stateHandler.getClientIdByStateId(state);
     }
 
@@ -80,7 +80,7 @@ public class NFSv4StateHandlerTest {
 
     @Test
     public void testUpdateLeaseTime() throws Exception {
-        NFS4State state = _client.createState(_owner);
+        NFS4State state = _client.createOpenState(_owner);
         stateid4 stateid = state.stateid();
         state.confirm();
         _stateHandler.updateClientLeaseTime(stateid);
@@ -88,7 +88,7 @@ public class NFSv4StateHandlerTest {
 
     @Test(expected=BadStateidException.class)
     public void testUpdateLeaseTimeNotConfirmed() throws Exception {
-        NFS4State state = _client.createState(_owner);
+        NFS4State state = _client.createOpenState(_owner);
         stateid4 stateid = state.stateid();
 
         _stateHandler.updateClientLeaseTime(stateid);
@@ -96,13 +96,13 @@ public class NFSv4StateHandlerTest {
 
     @Test(expected=BadStateidException.class)
     public void testUpdateLeaseTimeNotExists() throws Exception {
-        stateid4 state = _client.createState(_owner).stateid();
+        stateid4 state = _client.createOpenState(_owner).stateid();
         _stateHandler.updateClientLeaseTime(state);
     }
 
     @Test(expected = IllegalStateException.class)
     public void testUseAfterShutdown() throws Exception {
-        NFS4State state = _client.createState(_owner);
+        NFS4State state = _client.createOpenState(_owner);
         stateid4 stateid = state.stateid();
         state.confirm();
         _stateHandler.shutdown();
@@ -125,7 +125,7 @@ public class NFSv4StateHandlerTest {
         int instanceId = 117;
         NFSv4StateHandler stateHandler = new NFSv4StateHandler(Duration.ofSeconds(2), instanceId, new EphemeralClientRecoveryStore());
         try {
-            NFS4State state = createClient(stateHandler).createState(_owner);
+            NFS4State state = createClient(stateHandler).createOpenState(_owner);
             assertEquals("Invalid instance id returned", instanceId, NFSv4StateHandler.getInstanceId(state.stateid()));
         } finally {
             stateHandler.shutdown();
@@ -134,7 +134,7 @@ public class NFSv4StateHandlerTest {
 
     @Test
     public void testGetClientByStateid() throws Exception {
-        NFS4State state = _client.createState(_owner);
+        NFS4State state = _client.createOpenState(_owner);
         stateid4 stateid = state.stateid();
         state.confirm();
 
@@ -186,4 +186,35 @@ public class NFSv4StateHandlerTest {
         _stateHandler.getConfirmedClient(_client.getId());
     }
 
+    @Test
+    public void testOpenStateidType() throws ChimeraNFSException {
+        var openState = _client.createOpenState(_owner);
+        Stateids.checkOpenStateid(openState.stateid());
+    }
+
+    @Test
+    public void testLockStateidType() throws ChimeraNFSException {
+        var openState = _client.createOpenState(_owner);
+        var lockState = _client.createLockState(_owner, openState);
+        Stateids.checkLockStateid(lockState.stateid());
+    }
+
+    @Test
+    public void testLayoutStateidType() throws ChimeraNFSException {
+        var layoutState = _client.createLayoutState(_owner);
+        Stateids.checkLayoutStateid(layoutState.stateid());
+    }
+
+    @Test
+    public void testDelegationStateidType() throws ChimeraNFSException {
+        var delegationState = _client.createDelegationState(_owner);
+        Stateids.checkDelegationStateid(delegationState.stateid());
+    }
+
+    @Test
+    public void testSscStateidType() throws ChimeraNFSException {
+        var openState = _client.createOpenState(_owner);
+        var sscState = _client.createServerSideCopyState(_owner, openState);
+        Stateids.checkServerSiderCopyStateid(sscState.stateid());
+    }
 }
