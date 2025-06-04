@@ -20,6 +20,7 @@
 package org.dcache.nfs.v4;
 
 import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.status.BadStateidException;
 import org.dcache.nfs.v4.xdr.nfs4_prot;
 import org.dcache.nfs.v4.xdr.stateid4;
 import org.slf4j.Logger;
