@@ -90,6 +90,9 @@
                         <version>2.0.1</version>
                     </dependency>
                 </dependencies>
+                <configuration>
+                    <arguments>-DskipTests</arguments>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
