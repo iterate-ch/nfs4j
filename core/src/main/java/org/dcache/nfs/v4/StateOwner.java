@@ -56,7 +56,7 @@ public class StateOwner implements Serializable {
         int next = seq + 1;
         if (next != openSeqid.value) {
             _log.error("Expected next sequence id {} but received {}",
-                    next, openSeqid);
+                    next, openSeqid.value);
             seq = openSeqid.value;
         }
         else {
