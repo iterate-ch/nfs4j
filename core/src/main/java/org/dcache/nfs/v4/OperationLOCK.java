@@ -78,7 +78,13 @@ public class OperationLOCK extends AbstractNFSv4Operation {
             NFS4State openState = client.state(oldStateid);
             Stateids.checkStateId(openState.stateid(), oldStateid);
             if (context.getMinorversion() == 0) {
-                openState.getStateOwner().acceptAsNextSequence(_args.oplock.locker.open_owner.open_seqid);
+                final nfs_resop4 replay = openState.getStateOwner()
+                        .acceptAsNextSequence(_args.oplock.locker.open_owner.open_seqid);
+                if (replay != null) {
+                    result.oplock = replay.oplock;
+                    return;
+                }
+                openState.getStateOwner().updateReply(result);
                 client.updateLeaseTime();
             }
 
@@ -96,7 +102,12 @@ public class OperationLOCK extends AbstractNFSv4Operation {
 
             lockOwner = lock_state.getStateOwner();
             if (context.getMinorversion() == 0) {
-                lockOwner.acceptAsNextSequence(_args.oplock.locker.lock_owner.lock_seqid);
+                final nfs_resop4 replay = lockOwner.acceptAsNextSequence(_args.oplock.locker.lock_owner.lock_seqid);
+                if (replay != null) {
+                    result.oplock = replay.oplock;
+                    return;
+                }
+                lockOwner.updateReply(result);
                 client.updateLeaseTime();
             }
         }

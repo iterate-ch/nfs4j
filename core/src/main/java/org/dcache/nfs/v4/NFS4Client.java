@@ -619,14 +619,17 @@ public class NFS4Client {
     }
 
     /**
-     * Get and validate {@link StateOwner}. If owner does not exist a new owner will
-     * be created initial {@code seq}.
+     * Get {@link StateOwner}. If owner does not exist a new owner is created preceding {@code seq}, so that the
+     * request carrying it validates as the first request in order.
+     * <p>
+     * The sequence id is not validated here. Callers processing a minor version zero request must pass it to
+     * {@link StateOwner#acceptAsNextSequence(seqid4)} to detect a retransmission and to obtain the reply to replay.
+     *
      * @param owner client unique state owner
-     * @param seq open sequence to validate
+     * @param seq open sequence of the request the owner is looked up for
      * @return state owner
-     * @throws BadSeqidException if sequence out of order.
      */
-    public synchronized StateOwner getOrCreateOwner(byte[] owner, seqid4 seq) throws BadSeqidException {
+    public synchronized StateOwner getOrCreateOwner(byte[] owner, seqid4 seq) {
         StateOwner stateOwner;
         if (_minorVersion == 0) {
             Opaque k = new Opaque(owner);
@@ -635,10 +638,8 @@ public class NFS4Client {
                 state_owner4 so = new state_owner4();
                 so.clientid = _clientId;
                 so.owner = owner;
-                stateOwner = new StateOwner(so, seq.value);
+                stateOwner = new StateOwner(so, seq.value - 1);
                 _owners.put(k, stateOwner);
-            } else {
-                stateOwner.acceptAsNextSequence(seq);
             }
         } else {
             // for minor version client id derived from session

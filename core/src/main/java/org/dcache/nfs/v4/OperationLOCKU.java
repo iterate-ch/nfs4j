@@ -70,7 +70,12 @@ public class OperationLOCKU extends AbstractNFSv4Operation {
             lock_state = client.state(lockStateid);
             lockOwner = lock_state.getStateOwner();
             if (context.getMinorversion() == 0) {
-                lockOwner.acceptAsNextSequence(_args.oplocku.seqid);
+                final nfs_resop4 replay = lockOwner.acceptAsNextSequence(_args.oplocku.seqid);
+                if (replay != null) {
+                    result.oplocku = replay.oplocku;
+                    return;
+                }
+                lockOwner.updateReply(result);
             }
 
             NlmLock lock = new NlmLock(lockOwner, _args.oplocku.locktype, _args.oplocku.offset.value, _args.oplocku.length.value);
