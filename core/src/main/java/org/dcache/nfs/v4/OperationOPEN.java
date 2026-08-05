@@ -90,6 +90,15 @@ public class OperationOPEN extends AbstractNFSv4Operation {
 
         owner = client.getOrCreateOwner(_args.opopen.owner.owner, _args.opopen.seqid);
 
+        if (context.getMinorversion() == 0) {
+            final nfs_resop4 replay = owner.acceptAsNextSequence(_args.opopen.seqid);
+            if (replay != null) {
+                result.opopen = replay.opopen;
+                return;
+            }
+            owner.updateReply(result);
+        }
+
         res.resok4 = new OPEN4resok();
         res.resok4.attrset = new bitmap4();
         res.resok4.delegation = new open_delegation4();

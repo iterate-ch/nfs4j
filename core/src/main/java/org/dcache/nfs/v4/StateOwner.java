@@ -22,6 +22,7 @@ package org.dcache.nfs.v4;
 import com.google.common.base.MoreObjects;
 import java.io.Serializable;
 import org.dcache.nfs.status.BadSeqidException;
+import org.dcache.nfs.v4.xdr.nfs_resop4;
 import org.dcache.nfs.v4.xdr.seqid4;
 import org.dcache.nfs.v4.xdr.state_owner4;
 import org.slf4j.Logger;
@@ -46,22 +47,54 @@ public class StateOwner implements Serializable {
      */
     private final state_owner4 owner;
 
+    /**
+     * Reply recorded for the request identified by {@link #seq}. Replayed when the client repeats the sequence id
+     * instead of executing the operation a second time. Not part of the persisted state of the owner.
+     */
+    private transient nfs_resop4 reply;
+
     public StateOwner(state_owner4 owner, int seq) {
         this.owner = owner;
         this.seq = seq;
     }
 
-    public synchronized void acceptAsNextSequence(seqid4 openSeqid) throws BadSeqidException {
+    /**
+     * Validate the sequence id of an open or lock request against the sequence id of the previous request of this
+     * owner.
+     * <p>
+     * A request repeating the previous sequence id is a retransmission. As required by RFC 7530 9.1.7 the recorded
+     * reply of that request is returned instead of executing the operation again. The caller is expected to respond
+     * with the returned reply and to skip the operation.
+     * <p>
+     * Any other unexpected sequence id is adopted rather than rejected with {@link BadSeqidException}.
+     *
+     * @param openSeqid Sequence id received from the client
+     * @return Recorded reply when the request repeats the previous sequence id, null for a new request. Null is also
+     *         returned for a retransmission with no reply recorded, in which case the operation is executed again.
+     */
+    public synchronized nfs_resop4 acceptAsNextSequence(seqid4 openSeqid) throws BadSeqidException {
 
+        if (seq == openSeqid.value) {
+            _log.warn("Retransmit detected for sequence id {} with reply {}", openSeqid.value, reply);
+            return reply;
+        }
         int next = seq + 1;
         if (next != openSeqid.value) {
             _log.error("Expected next sequence id {} but received {}",
                     next, openSeqid.value);
-            seq = openSeqid.value;
         }
-        else {
-            seq = next;
-        }
+        seq = openSeqid.value;
+        reply = null;
+        return null;
+    }
+
+    /**
+     * Record the reply for the sequence id of the request currently processed to be replayed on retransmission.
+     *
+     * @param reply Reply sent to the client
+     */
+    public synchronized void updateReply(nfs_resop4 reply) {
+        this.reply = reply;
     }
 
     @Override
