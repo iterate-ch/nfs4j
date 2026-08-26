@@ -81,6 +81,23 @@ public class FileTracker {
     private final AdaptiveDelegationLogic adlHeuristic =
             new AdaptiveDelegationLogic(4096, 4096, Duration.ofSeconds(120));
 
+    /**
+     * The macOS NFS client runs into a state recovery loop when read delegations handed out by the
+     * adaptive heuristic are recalled or revoked, leaving applications such as Excel unable to open
+     * files. Allow disabling the granting of open delegations, see
+     * {@link NFSServerV41.Builder#withOpenDelegations(boolean)}.
+     */
+    private volatile boolean delegationsEnabled = true;
+
+    /**
+     * Enable or disable granting of open delegations to clients.
+     *
+     * @param delegationsEnabled true if the server may hand out delegations.
+     */
+    public void setDelegationsEnabled(boolean delegationsEnabled) {
+        this.delegationsEnabled = delegationsEnabled;
+    }
+
     private static class OpenState {
 
         private final NFS4Client client;
@@ -270,7 +287,7 @@ public class FileTracker {
              * delegation is possible if: - client has not explicitly requested no delegation - client has a callback
              * channel - client does not have a delegation for this file - no other open has write access
              */
-            boolean canDelegateRead = acceptsDelegation && (client.getCB() != null &&
+            boolean canDelegateRead = delegationsEnabled && acceptsDelegation && (client.getCB() != null &&
                     (existingDelegations == null ||
                             existingDelegations.stream()
                                     .noneMatch(d -> d.client().getId() == client.getId())) &&

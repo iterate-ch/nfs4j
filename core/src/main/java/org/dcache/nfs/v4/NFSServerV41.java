@@ -70,6 +70,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
         _operationExecutor = builder.operationExecutor;
         _nlm = builder.nlm == null ? new SimpleLm() : builder.nlm;
         _statHandler = builder.stateHandler == null ? new NFSv4StateHandler() : builder.stateHandler;
+        _statHandler.getFileTracker().setDelegationsEnabled(builder.openDelegations);
 
         _implementationId = new nfs_impl_id4();
         _implementationId.nii_date = new nfstime4(builder.implementationDate.toEpochMilli());
@@ -300,6 +301,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
         private String implementationName = NFSv4Defaults.NFS4_IMPLEMENTATION_ID;
         private String implementationDomain = NFSv4Defaults.NFS4_IMPLEMENTATION_DOMAIN;
         private Instant implementationDate = NFSv4Defaults.NFS4_IMPLEMENTATION_DATE;
+        private boolean openDelegations = true;
 
         public Builder withDeviceManager(NFSv41DeviceManager deviceManager) {
             this.deviceManager = deviceManager;
@@ -351,6 +353,16 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
         public Builder withStateHandler(NFSv4StateHandler stateHandler) {
             this.stateHandler = stateHandler;
+            return this;
+        }
+
+        /**
+         * Enable or disable granting of open delegations to clients. Enabled by default.
+         *
+         * @param openDelegations true if the server may hand out delegations.
+         */
+        public Builder withOpenDelegations(boolean openDelegations) {
+            this.openDelegations = openDelegations;
             return this;
         }
 
