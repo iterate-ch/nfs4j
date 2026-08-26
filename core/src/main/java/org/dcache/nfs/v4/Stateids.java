@@ -59,14 +59,15 @@ public class Stateids {
     private static final Logger _log = LoggerFactory.getLogger(Stateids.class);
 
     private final static stateid4 CURRENT_STATEID =
-            new stateid4(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 1);
+            new stateid4(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 1);
     private final static stateid4 INVAL_STATEID =
-            new stateid4(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nfs4_prot.NFS4_UINT32_MAX);
+            new stateid4(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nfs4_prot.NFS4_UINT32_MAX);
     private final static stateid4 ZERO_STATEID =
-	    new stateid4(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0);
+            new stateid4(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0);
 
-    private final static stateid4 ONE_STATEID
-            = new stateid4(new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff}, nfs4_prot.NFS4_UINT32_MAX);
+    private final static stateid4 ONE_STATEID = new stateid4(new byte[] {
+            (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+            (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff}, nfs4_prot.NFS4_UINT32_MAX);
 
     public static stateid4 uptodateOf(stateid4 stateid) {
         return new stateid4(stateid.other, 0);
@@ -81,7 +82,7 @@ public class Stateids {
     }
 
     public static stateid4 ZeroStateId() {
-	return ZERO_STATEID;
+        return ZERO_STATEID;
     }
 
     public static stateid4 OneStateId() {
@@ -107,7 +108,8 @@ public class Stateids {
         }
     }
 
-    public static stateid4 getCurrentStateidIfNeeded(CompoundContext context, stateid4 stateid) throws ChimeraNFSException {
+    public static stateid4 getCurrentStateidIfNeeded(CompoundContext context, stateid4 stateid)
+            throws ChimeraNFSException {
         if (stateid.equalsWithSeq(CURRENT_STATEID)) {
             return context.currentStateid();
         }

@@ -5,12 +5,13 @@
     <parent>
       <groupId>ch.iterate</groupId>
       <artifactId>nfs4j</artifactId>
-      <version>0.27.2-SNAPSHOT</version>
+      <version>0.28.6-SNAPSHOT</version>
     </parent>
 
     <groupId>ch.iterate</groupId>
     <artifactId>nfs4j-core</artifactId>
     <packaging>jar</packaging>
+    <name>NFS4J Server component</name>
 
     <build>
         <pluginManagement>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2021 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,15 +19,14 @@
  */
 package org.dcache.nfs.v4;
 
+import java.io.IOException;
+
 import org.dcache.nfs.ChimeraNFSException;
 import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.v4.xdr.*;
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 
-import java.io.IOException;
-
 public class MDSOperationExecutor extends AbstractOperationExecutor {
-
 
     @Override
     protected AbstractNFSv4Operation getOperation(nfs_argop4 op) {
@@ -110,7 +109,7 @@ public class MDSOperationExecutor extends AbstractOperationExecutor {
             case nfs_opnum4.OP_BACKCHANNEL_CTL:
                 return new OperationBACKCHANNEL_CTL(op);
             /**
-             *  NFSv4.1 (pNFS)
+             * NFSv4.1 (pNFS)
              */
             case nfs_opnum4.OP_GETDEVICELIST:
                 return new OperationGETDEVICELIST(op);
@@ -128,13 +127,12 @@ public class MDSOperationExecutor extends AbstractOperationExecutor {
                 return new OperationGETDEVICEINFO(op);
             case nfs_opnum4.OP_EXCHANGE_ID:
                 /*
-                 * By having chimera as a backend file system we need to support
-                 * legacy .(xx)(xx)... commands. To allow read of those files,
-                 * MDS ( nfsv41 door ) have to declare itself as a data server (DS).
+                 * By having chimera as a backend file system we need to support legacy .(xx)(xx)... commands. To allow
+                 * read of those files, MDS ( nfsv41 door ) have to declare itself as a data server (DS).
                  *
                  * indicate that we are a MDS and DS at the same time.
                  */
-            return new OperationEXCHANGE_ID(op);
+                return new OperationEXCHANGE_ID(op);
             case nfs_opnum4.OP_CREATE_SESSION:
                 return new OperationCREATE_SESSION(op);
             case nfs_opnum4.OP_DESTROY_SESSION:
@@ -163,6 +161,8 @@ public class MDSOperationExecutor extends AbstractOperationExecutor {
                 return new OperationREMOVEXATTR(op);
             case nfs_opnum4.OP_COPY:
                 return new OperationCOPY(op);
+
+            // legit, but not supported by nfs4j operations.
             case nfs_opnum4.OP_ALLOCATE:
             case nfs_opnum4.OP_COPY_NOTIFY:
             case nfs_opnum4.OP_DEALLOCATE:
@@ -173,10 +173,11 @@ public class MDSOperationExecutor extends AbstractOperationExecutor {
             case nfs_opnum4.OP_SEEK:
             case nfs_opnum4.OP_WRITE_SAME:
             case nfs_opnum4.OP_CLONE:
-                // in V4.2 all operations are optional.
+            case nfs_opnum4.OP_GET_DIR_DELEGATION:
                 return new AbstractNFSv4Operation(op, op.argop) {
                     @Override
-                    public void process(CompoundContext context, nfs_resop4 result) throws ChimeraNFSException, IOException, OncRpcException {
+                    public void process(CompoundContext context, nfs_resop4 result) throws ChimeraNFSException,
+                            IOException, OncRpcException {
                         result.setStatus(nfsstat.NFSERR_NOTSUPP);
                     }
                 };

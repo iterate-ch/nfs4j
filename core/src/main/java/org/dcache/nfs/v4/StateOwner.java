@@ -19,13 +19,15 @@
  */
 package org.dcache.nfs.v4;
 
-import com.google.common.base.MoreObjects;
 import java.io.Serializable;
+
 import org.dcache.nfs.status.BadSeqidException;
 import org.dcache.nfs.v4.xdr.seqid4;
 import org.dcache.nfs.v4.xdr.state_owner4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
 
 /**
  * Owner associated with the open/lock operations.

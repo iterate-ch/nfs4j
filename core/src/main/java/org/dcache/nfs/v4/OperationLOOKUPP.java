@@ -20,13 +20,14 @@
 package org.dcache.nfs.v4;
 
 import java.io.IOException;
-import org.dcache.nfs.nfsstat;
-import org.dcache.nfs.v4.xdr.nfs_argop4;
-import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.LOOKUPP4res;
+
 import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.NotDirException;
 import org.dcache.nfs.status.SymlinkException;
+import org.dcache.nfs.v4.xdr.LOOKUPP4res;
+import org.dcache.nfs.v4.xdr.nfs_argop4;
+import org.dcache.nfs.v4.xdr.nfs_opnum4;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
 import org.dcache.nfs.vfs.Inode;
 import org.dcache.nfs.vfs.Stat;
@@ -45,13 +46,13 @@ public class OperationLOOKUPP extends AbstractNFSv4Operation {
     public void process(CompoundContext context, nfs_resop4 result) throws ChimeraNFSException, IOException {
         final LOOKUPP4res res = result.oplookupp;
 
-        Stat stat = context.getFs().getattr(context.currentInode());
+        Stat.Type statType = context.getFs().getattr(context.currentInode(), Stat.STAT_ATTRIBUTES_TYPE_ONLY).type();
 
-	if (stat.type() == Stat.Type.SYMLINK) {
-	    throw new SymlinkException("get parent on a symlink");
-	}
+        if (statType == Stat.Type.SYMLINK) {
+            throw new SymlinkException("get parent on a symlink");
+        }
 
-        if (stat.type() != Stat.Type.DIRECTORY) {
+        if (statType != Stat.Type.DIRECTORY) {
             throw new NotDirException("not a directory");
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2018 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,41 +19,41 @@
  */
 package org.dcache.nfs.v4.xdr;
 
+import java.io.IOException;
+import java.util.Arrays;
 import com.google.common.io.BaseEncoding;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.util.Bytes;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
-import java.io.IOException;
-import java.util.Arrays;
 
 public class verifier4 implements XdrAble {
 
-    public byte [] value;
+    public byte[] value;
 
     public verifier4() {
     }
 
-    public verifier4(byte [] value) {
+    public verifier4(byte[] value) {
         this.value = value;
     }
 
     public verifier4(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         xdrDecode(xdr);
     }
 
     public void xdrEncode(XdrEncodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         xdr.xdrEncodeOpaque(value, nfs4_prot.NFS4_VERIFIER_SIZE);
     }
 
     public void xdrDecode(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         value = xdr.xdrDecodeOpaque(nfs4_prot.NFS4_VERIFIER_SIZE);
     }
-
 
     @Override
     public int hashCode() {
@@ -63,10 +63,12 @@ public class verifier4 implements XdrAble {
     @Override
     public boolean equals(Object o) {
 
-        if( o == this) return true;
-        if(!(o instanceof verifier4)) return false;
+        if (o == this)
+            return true;
+        if (!(o instanceof verifier4))
+            return false;
 
-        verifier4 other = (verifier4)o;
+        verifier4 other = (verifier4) o;
 
         return Arrays.equals(other.value, this.value);
     }
