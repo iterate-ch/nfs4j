@@ -299,9 +299,7 @@ public interface Opaque {
         @Override
         public byte[] toBytes() {
             byte[] bytes = new byte[length];
-            ByteBuffer view = buf.duplicate();
-            view.position(index);
-            view.get(bytes);
+            buf.get(index, bytes);
             return bytes;
         }
 

@@ -22,7 +22,7 @@ package org.dcache.nfs.v4.xdr;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 import java.util.Objects;
 
 import org.dcache.oncrpc4j.rpc.OncRpcException;
@@ -91,7 +91,7 @@ public class state_owner4 implements XdrAble, Serializable {
     public String toString() {
         return MoreObjects.toStringHelper(this.getClass().getSimpleName())
                 .add("clientid", Long.toString(clientid.value, 16))
-                .add("ownerid", BaseEncoding.base16().lowerCase().encode(owner))
+                .add("ownerid", HexFormat.of().formatHex(owner))
                 .toString();
     }
 }

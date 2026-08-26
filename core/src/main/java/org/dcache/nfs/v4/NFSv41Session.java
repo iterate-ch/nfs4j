@@ -20,7 +20,7 @@
 package org.dcache.nfs.v4;
 
 import java.util.HashSet;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 
@@ -145,7 +145,7 @@ public class NFSv41Session {
 
     @Override
     public String toString() {
-        return _client.getRemoteAddress() + " : " + BaseEncoding.base16().lowerCase().encode(_session.value);
+        return _client.getRemoteAddress() + " : " + HexFormat.of().formatHex(_session.value);
     }
 
     /**

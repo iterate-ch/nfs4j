@@ -208,52 +208,13 @@ public class FileTracker {
 
     /**
      * Record associated with an open file.
+     *
+     * @param openStateId
+     * @param delegationStateId
+     * @param hasDelegation
      */
-    public static final class OpenRecord {
-        private final stateid4 openStateId;
-        private final stateid4 delegationStateId;
-        private final boolean hasDelegation;
+    public record OpenRecord(stateid4 openStateId, stateid4 delegationStateId, boolean hasDelegation) {
 
-        public OpenRecord(stateid4 openStateId, stateid4 delegationStateId, boolean hasDelegation) {
-            this.openStateId = openStateId;
-            this.delegationStateId = delegationStateId;
-            this.hasDelegation = hasDelegation;
-        }
-
-        public stateid4 openStateId() {
-            return openStateId;
-        }
-
-        public stateid4 delegationStateId() {
-            return delegationStateId;
-        }
-
-        public boolean hasDelegation() {
-            return hasDelegation;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (obj == null || obj.getClass() != this.getClass()) return false;
-            var that = (OpenRecord) obj;
-            return Objects.equals(this.openStateId, that.openStateId) &&
-                    Objects.equals(this.delegationStateId, that.delegationStateId) &&
-                    this.hasDelegation == that.hasDelegation;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(openStateId, delegationStateId, hasDelegation);
-        }
-
-        @Override
-        public String toString() {
-            return "OpenRecord[" +
-                    "openStateId=" + openStateId + ", " +
-                    "delegationStateId=" + delegationStateId + ", " +
-                    "hasDelegation=" + hasDelegation + ']';
-        }
     }
 
     /**

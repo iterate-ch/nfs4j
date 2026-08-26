@@ -22,7 +22,7 @@ package org.dcache.nfs.v4.xdr;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.xdr.XdrAble;
@@ -99,7 +99,7 @@ public class stateid4 implements XdrAble, Serializable {
         StringBuilder sb = new StringBuilder();
 
         sb.append("[");
-        sb.append(BaseEncoding.base16().lowerCase().encode(other));
+        sb.append(HexFormat.of().formatHex(other));
         sb.append(", seq: ").append(seqid).append("]");
         return sb.toString();
     }

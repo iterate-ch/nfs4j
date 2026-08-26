@@ -21,7 +21,7 @@ package org.dcache.nfs.v4.xdr;
 
 import java.io.IOException;
 import java.util.Arrays;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.xdr.XdrAble;
@@ -75,7 +75,7 @@ public class sessionid4 implements XdrAble {
 
     @Override
     public String toString() {
-        return BaseEncoding.base16().lowerCase().encode(value);
+        return HexFormat.of().formatHex(value);
     }
 }
 // End of sessionid4.java

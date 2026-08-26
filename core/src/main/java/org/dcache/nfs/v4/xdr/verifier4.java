@@ -21,7 +21,7 @@ package org.dcache.nfs.v4.xdr;
 
 import java.io.IOException;
 import java.util.Arrays;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.util.Bytes;
@@ -76,7 +76,7 @@ public class verifier4 implements XdrAble {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append('[').append(BaseEncoding.base16().lowerCase().encode(value)).append(']');
+        sb.append('[').append(HexFormat.of().formatHex(value)).append(']');
         return sb.toString();
     }
 

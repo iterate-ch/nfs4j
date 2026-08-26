@@ -22,7 +22,7 @@ package org.dcache.nfs.vfs;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
-import com.google.common.io.BaseEncoding;
+import java.util.HexFormat;
 
 import org.dcache.nfs.util.Opaque;
 
@@ -134,7 +134,7 @@ public class Inode {
 
     @Override
     public String toString() {
-        return BaseEncoding.base16().lowerCase().encode(nfsHandle);
+        return HexFormat.of().formatHex(nfsHandle);
     }
 
     public static Inode forNfsHandle(byte[] bytes) {
