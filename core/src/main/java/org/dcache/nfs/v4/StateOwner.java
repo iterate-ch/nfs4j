@@ -51,17 +51,32 @@ public class StateOwner implements Serializable {
         this.seq = seq;
     }
 
+    /**
+     * Validate the sequence id of an open or lock request against the sequence id of the previous request of this
+     * owner.
+     * <p>
+     * A request repeating the previous sequence id is a retransmission. RFC 7530 9.1.7 requires the reply of that
+     * request to be returned again, which is not implemented here. Executing the operation a second time answers with
+     * a state the client is not waiting for, leaving it to repeat the request indefinitely. Fail with
+     * {@link BadSeqidException} instead to have the client recover its state.
+     * <p>
+     * Any other unexpected sequence id is adopted rather than rejected.
+     *
+     * @param openSeqid Sequence id received from the client
+     * @throws BadSeqidException Sequence id repeats the sequence id of the previous request
+     */
     public synchronized void acceptAsNextSequence(seqid4 openSeqid) throws BadSeqidException {
 
+        if (seq == openSeqid.value) {
+            _log.error("Retransmit of sequence id {} with no reply recorded", openSeqid.value);
+            throw new BadSeqidException(String.format("Retransmit of sequence id %d", openSeqid.value));
+        }
         int next = seq + 1;
         if (next != openSeqid.value) {
             _log.error("Expected next sequence id {} but received {}",
                     next, openSeqid.value);
-            seq = openSeqid.value;
         }
-        else {
-            seq = next;
-        }
+        seq = openSeqid.value;
     }
 
     @Override
