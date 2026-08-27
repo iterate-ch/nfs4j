@@ -420,8 +420,7 @@ public class NFS4Client {
 
         NFS4State state = _clientStates.get(stateid);
         if (state == null) {
-            _log.warn("Ignore unknown client state: " + stateid);
-            return;
+            throw new BadStateidException("State not known to the client: " + stateid);
         }
         state.disposeIgnoreFailures();
         _clientStates.remove(stateid);
@@ -431,8 +430,7 @@ public class NFS4Client {
 
         NFS4State state = _clientStates.get(stateid);
         if (state == null) {
-            _log.warn("Ignore unknown client state: " + stateid);
-            return;
+            throw new BadStateidException("State not known to the client: " + stateid);
         }
         state.tryDispose();
         _clientStates.remove(stateid);
@@ -440,12 +438,7 @@ public class NFS4Client {
 
     public NFS4State state(stateid4 stateid) throws ChimeraNFSException {
         NFS4State state = _clientStates.get(stateid);
-        if(state == null) {
-            if (_clientStates.size() > 0) {
-                final NFS4State s = _clientStates.values().iterator().next();
-                _log.warn("Unknown client state " + stateid + " returning " + s);
-                return s;
-            }
+        if (state == null) {
             throw new BadStateidException("State not known to the client: " + stateid);
         }
         return state;

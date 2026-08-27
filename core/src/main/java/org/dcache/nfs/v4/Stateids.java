@@ -21,10 +21,9 @@ package org.dcache.nfs.v4;
 
 import org.dcache.nfs.ChimeraNFSException;
 import org.dcache.nfs.status.BadStateidException;
+import org.dcache.nfs.status.OldStateidException;
 import org.dcache.nfs.v4.xdr.nfs4_prot;
 import org.dcache.nfs.v4.xdr.stateid4;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Stateids {
 
@@ -55,8 +54,6 @@ public class Stateids {
 
     private Stateids() {
     }
-
-    private static final Logger _log = LoggerFactory.getLogger(Stateids.class);
 
     private final static stateid4 CURRENT_STATEID =
             new stateid4(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 1);
@@ -100,11 +97,11 @@ public class Stateids {
         }
 
         if (expected.seqid > stateid.seqid) {
-            _log.warn("Ignore old stateid: " + stateid + " expected: " + expected);
+            throw new OldStateidException();
         }
 
         if (expected.seqid < stateid.seqid) {
-            _log.warn("Ignore bad stateId: " + stateid + " expected: " + expected);
+            throw new BadStateidException();
         }
     }
 
