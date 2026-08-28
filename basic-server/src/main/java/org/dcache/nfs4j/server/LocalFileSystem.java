@@ -606,7 +606,6 @@ public class LocalFileSystem implements VirtualFileSystem {
                 throw new UnsupportedOperationException("set btime failed: " + e.getMessage(), e);
             }
         }
-        // CTIME (change time) is maintained by the kernel and cannot be set explicitly
     }
 
     @Override
