@@ -8,7 +8,7 @@
 
   <groupId>ch.iterate</groupId>
   <artifactId>nfs4j</artifactId>
-  <version>0.28.6-SNAPSHOT</version>
+  <version>0.29.0-SNAPSHOT</version>
   <name>Java based NFSv4.1 implementation</name>
   <packaging>pom</packaging>
 
@@ -205,18 +205,6 @@
       MAVEN REPOSITORIES
     -->
     <repositories>
-        <repository>
-            <id>maven2-repository.dcache.org</id>
-            <name>dCache.ORG Repository for Maven</name>
-            <url>https://download.dcache.org/nexus/content/groups/public/</url>
-            <layout>default</layout>
-        </repository>
-        <repository>
-            <id>dcache-snapshots</id>
-            <name>dCache.ORG snapshots repository</name>
-            <url>https://download.dcache.org/nexus/content/repositories/snapshots</url>
-            <layout>default</layout>
-        </repository>
         <repository>
             <id>maven.iterate.ch-release</id>
             <url>s3://repo.maven.iterate.ch/releases/</url>
