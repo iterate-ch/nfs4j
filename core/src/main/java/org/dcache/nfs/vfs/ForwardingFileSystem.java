@@ -21,17 +21,21 @@ package org.dcache.nfs.vfs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
+
 import javax.security.auth.Subject;
+
 import org.dcache.nfs.v4.NfsIdMapping;
 import org.dcache.nfs.v4.xdr.nfsace4;
+import org.dcache.nfs.vfs.Stat.StatAttribute;
 
 /**
- * A file system which forwards all its method calls to another file system.
- * Subclasses should override one or more methods to modify the behavior of the
- * backing file system as desired per the
+ * A file system which forwards all its method calls to another file system. Subclasses should override one or more
+ * methods to modify the behavior of the backing file system as desired per the
  * <a href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator pattern</a>.
- * @sice 0.10
+ *
+ * @since 0.10
  */
 public abstract class ForwardingFileSystem implements VirtualFileSystem {
 
@@ -103,6 +107,11 @@ public abstract class ForwardingFileSystem implements VirtualFileSystem {
     }
 
     @Override
+    public int read(Inode inode, ByteBuffer data, long offset, Runnable eofReached) throws IOException {
+        return delegate().read(inode, data, offset, eofReached);
+    }
+
+    @Override
     public String readlink(Inode inode) throws IOException {
         return delegate().readlink(inode);
     }
@@ -118,12 +127,14 @@ public abstract class ForwardingFileSystem implements VirtualFileSystem {
     }
 
     @Override
-    public WriteResult write(Inode inode, byte[] data, long offset, int count, StabilityLevel stabilityLevel) throws IOException {
+    public WriteResult write(Inode inode, byte[] data, long offset, int count, StabilityLevel stabilityLevel)
+            throws IOException {
         return delegate().write(inode, data, offset, count, stabilityLevel);
     }
 
     @Override
-    public WriteResult write(Inode inode, ByteBuffer data, long offset, StabilityLevel stabilityLevel) throws IOException {
+    public WriteResult write(Inode inode, ByteBuffer data, long offset, StabilityLevel stabilityLevel)
+            throws IOException {
         return delegate().write(inode, data, offset, stabilityLevel);
     }
 
@@ -135,6 +146,11 @@ public abstract class ForwardingFileSystem implements VirtualFileSystem {
     @Override
     public Stat getattr(Inode inode) throws IOException {
         return delegate().getattr(inode);
+    }
+
+    @Override
+    public Stat getattr(Inode inode, EnumSet<StatAttribute> attributes) throws IOException {
+        return delegate().getattr(inode, attributes);
     }
 
     @Override

@@ -20,18 +20,19 @@
 package org.dcache.nfs.v4;
 
 import java.io.IOException;
-import org.dcache.nfs.nfsstat;
-import org.dcache.nfs.v4.xdr.nfs_argop4;
-import org.dcache.nfs.v4.xdr.change_info4;
-import org.dcache.nfs.v4.xdr.changeid4;
-import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.LINK4resok;
+
 import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.IsDirException;
 import org.dcache.nfs.status.NotDirException;
-import org.dcache.nfs.vfs.Stat;
+import org.dcache.nfs.v4.xdr.LINK4resok;
+import org.dcache.nfs.v4.xdr.change_info4;
+import org.dcache.nfs.v4.xdr.changeid4;
+import org.dcache.nfs.v4.xdr.nfs_argop4;
+import org.dcache.nfs.v4.xdr.nfs_opnum4;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
 import org.dcache.nfs.vfs.Inode;
+import org.dcache.nfs.vfs.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,15 +54,15 @@ public class OperationLINK extends AbstractNFSv4Operation {
         result.oplink.resok4.cinfo.atomic = true;
 
         Inode parent = context.currentInode();
-        Stat parentDirStat = context.getFs().getattr(parent);
-        Stat inodeStat = context.getFs().getattr(context.savedInode());
 
-        if (parentDirStat.type() != Stat.Type.DIRECTORY) {
-            throw new NotDirException("Can't create a hard-link in non directory object");
+        Stat.Type inodeStatType = context.getFs().getattr(context.savedInode(), Stat.STAT_ATTRIBUTES_TYPE_ONLY).type();
+        if (inodeStatType == Stat.Type.DIRECTORY) {
+            throw new IsDirException("Can't hard-link a directory");
         }
 
-        if (inodeStat.type() == Stat.Type.DIRECTORY) {
-            throw new IsDirException("Can't hard-link a directory");
+        Stat parentDirStat = context.getFs().getattr(parent);
+        if (parentDirStat.type() != Stat.Type.DIRECTORY) {
+            throw new NotDirException("Can't create a hard-link in non directory object");
         }
 
         result.oplink.resok4.cinfo.before = new changeid4(parentDirStat.getGeneration());

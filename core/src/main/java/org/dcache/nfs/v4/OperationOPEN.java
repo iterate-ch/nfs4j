@@ -22,28 +22,9 @@ package org.dcache.nfs.v4;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.dcache.nfs.v4.xdr.aceflag4;
-import org.dcache.nfs.v4.xdr.acemask4;
-import org.dcache.nfs.v4.xdr.acetype4;
-import org.dcache.nfs.v4.xdr.nfsace4;
-import org.dcache.nfs.v4.xdr.open_delegation_type4;
-import org.dcache.nfs.v4.xdr.change_info4;
-import org.dcache.nfs.v4.xdr.bitmap4;
-import org.dcache.nfs.v4.xdr.nfs4_prot;
-import org.dcache.nfs.v4.xdr.nfs_argop4;
-import org.dcache.nfs.v4.xdr.changeid4;
-import org.dcache.nfs.nfsstat;
-import org.dcache.nfs.v4.xdr.open_none_delegation4;
-import org.dcache.nfs.v4.xdr.open_read_delegation4;
-import org.dcache.nfs.v4.xdr.uint32_t;
-import org.dcache.nfs.v4.xdr.opentype4;
-import org.dcache.nfs.v4.xdr.open_claim_type4;
-import org.dcache.nfs.v4.xdr.open_delegation4;
-import org.dcache.nfs.v4.xdr.createmode4;
-import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.OPEN4resok;
-import org.dcache.nfs.v4.xdr.OPEN4res;
 import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.FsExport;
+import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.AccessException;
 import org.dcache.nfs.status.BadXdrException;
 import org.dcache.nfs.status.ExistException;
@@ -53,10 +34,30 @@ import org.dcache.nfs.status.IsDirException;
 import org.dcache.nfs.status.NotDirException;
 import org.dcache.nfs.status.SymlinkException;
 import org.dcache.nfs.status.WrongTypeException;
+import org.dcache.nfs.v4.xdr.OPEN4res;
+import org.dcache.nfs.v4.xdr.OPEN4resok;
+import org.dcache.nfs.v4.xdr.aceflag4;
+import org.dcache.nfs.v4.xdr.acemask4;
+import org.dcache.nfs.v4.xdr.acetype4;
+import org.dcache.nfs.v4.xdr.bitmap4;
+import org.dcache.nfs.v4.xdr.change_info4;
+import org.dcache.nfs.v4.xdr.changeid4;
+import org.dcache.nfs.v4.xdr.createmode4;
 import org.dcache.nfs.v4.xdr.fattr4_size;
 import org.dcache.nfs.v4.xdr.mode4;
+import org.dcache.nfs.v4.xdr.nfs4_prot;
+import org.dcache.nfs.v4.xdr.nfs_argop4;
+import org.dcache.nfs.v4.xdr.nfs_opnum4;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
+import org.dcache.nfs.v4.xdr.nfsace4;
+import org.dcache.nfs.v4.xdr.open_claim_type4;
+import org.dcache.nfs.v4.xdr.open_delegation4;
+import org.dcache.nfs.v4.xdr.open_delegation_type4;
+import org.dcache.nfs.v4.xdr.open_none_delegation4;
+import org.dcache.nfs.v4.xdr.open_read_delegation4;
+import org.dcache.nfs.v4.xdr.opentype4;
 import org.dcache.nfs.v4.xdr.stateid4;
+import org.dcache.nfs.v4.xdr.uint32_t;
 import org.dcache.nfs.v4.xdr.utf8str_mixed;
 import org.dcache.nfs.v4.xdr.why_no_delegation4;
 import org.dcache.nfs.vfs.Inode;
@@ -74,7 +75,8 @@ public class OperationOPEN extends AbstractNFSv4Operation {
     }
 
     @Override
-    public void process(CompoundContext context, nfs_resop4 result) throws ChimeraNFSException, IOException, OncRpcException {
+    public void process(CompoundContext context, nfs_resop4 result) throws ChimeraNFSException, IOException,
+            OncRpcException {
         final OPEN4res res = result.opopen;
 
         NFS4Client client;
@@ -93,9 +95,10 @@ public class OperationOPEN extends AbstractNFSv4Operation {
         res.resok4 = new OPEN4resok();
         res.resok4.attrset = new bitmap4();
         res.resok4.delegation = new open_delegation4();
-        res.resok4.delegation.delegation_type = context.getMinorversion() == 0 ? open_delegation_type4.OPEN_DELEGATE_NONE : open_delegation_type4.OPEN_DELEGATE_NONE_EXT;
-        res.resok4.delegation.od_whynone =  new open_none_delegation4();
-        res.resok4.delegation.od_whynone.ond_why =  why_no_delegation4.WND4_NOT_WANTED;
+        res.resok4.delegation.delegation_type = context.getMinorversion() == 0
+                ? open_delegation_type4.OPEN_DELEGATE_NONE : open_delegation_type4.OPEN_DELEGATE_NONE_EXT;
+        res.resok4.delegation.od_whynone = new open_none_delegation4();
+        res.resok4.delegation.od_whynone.ond_why = why_no_delegation4.WND4_NOT_WANTED;
         res.resok4.cinfo = new change_info4();
         res.resok4.cinfo.atomic = true;
 
@@ -123,13 +126,10 @@ public class OperationOPEN extends AbstractNFSv4Operation {
                             || (_args.opopen.openhow.how.mode == createmode4.EXCLUSIVE4_1);
 
                     /**
-                     * According to the spec. client MAY send all allowed
-                     * attributes. Nevertheless, in reality, clients send only
-                     * mode. We will accept only mode and client will send extra
-                     * SETATTR is required.
+                     * According to the spec. client MAY send all allowed attributes. Nevertheless, in reality, clients
+                     * send only mode. We will accept only mode and client will send extra SETATTR is required.
                      *
-                     * REVISIT: we can apply all others as well to avoid extra
-                     * network round trip.
+                     * REVISIT: we can apply all others as well to avoid extra network round trip.
                      */
                     AttributeMap attributeMap;
 
@@ -170,7 +170,12 @@ public class OperationOPEN extends AbstractNFSv4Operation {
                             res.resok4.attrset.set(nfs4_prot.FATTR4_MODE);
                         }
 
-                        if (createSize.isPresent() && createSize.get().value == 0) {
+                        if (createSize.isPresent()) {
+                            if (createSize.get().value != 0) {
+                                var newSizeStat = new Stat();
+                                newSizeStat.setSize(createSize.get().value);
+                                context.getFs().setattr(inode, newSizeStat);
+                            }
                             res.resok4.attrset.set(nfs4_prot.FATTR4_SIZE);
                         }
 
@@ -220,23 +225,20 @@ public class OperationOPEN extends AbstractNFSv4Operation {
                 break;
             case open_claim_type4.CLAIM_PREVIOUS:
                 /*
-                 * We must trust the client to reclaiming the valid opens. The only
-                 * think we can check is that client has a previous record in the
-                 * client db.
+                 * We must trust the client to reclaiming the valid opens. The only think we can check is that client
+                 * has a previous record in the client db.
                  *
                  * See: https://tools.ietf.org/html/rfc5661#section-8.4.2.1
                  */
                 client.wantReclaim();
-                 // fallthrough to CLAIM_FH
+                // fallthrough to CLAIM_FH
             case open_claim_type4.CLAIM_FH:
 
                 _log.debug("open by Inode for : {}", context.currentInode());
 
                 /*
-                 * Send some dummy values for cinfo, as client
-                 * does not really expect something. We can do a stat on parent,
-                 * by this will be an extra fileststem (db) call which client
-                 * will not use.
+                 * Send some dummy values for cinfo, as client does not really expect something. We can do a stat on
+                 * parent, by this will be an extra fileststem (db) call which client will not use.
                  */
                 res.resok4.cinfo.before = new changeid4(0);
                 res.resok4.cinfo.after = new changeid4(0);
@@ -267,19 +269,18 @@ public class OperationOPEN extends AbstractNFSv4Operation {
         }
 
         /*
-         * NOTICE:
-         * in case on concurrent non-exclusive created with share_deny == WRITE
-         * may happen that client which have created the file will get DENY.
+         * NOTICE: in case on concurrent non-exclusive created with share_deny == WRITE may happen that client which
+         * have created the file will get DENY.
          *
-         * THis is a perfectly a valid situation as at the end file is created and only
-         * one writer is allowed.
+         * THis is a perfectly a valid situation as at the end file is created and only one writer is allowed.
          */
         var openRecord = context
                 .getStateHandler()
                 .getFileTracker()
                 .addOpen(client, owner, context.currentInode(),
-                _args.opopen.share_access.value,
-                _args.opopen.share_deny.value);
+                        _args.opopen.share_access.value,
+                        _args.opopen.share_deny.value,
+                        isDelegationAllowed(context, context.currentInode()));
 
         context.currentStateid(openRecord.openStateId());
         res.resok4.stateid = openRecord.openStateId();
@@ -300,6 +301,24 @@ public class OperationOPEN extends AbstractNFSv4Operation {
 
     }
 
+    private boolean isDelegationAllowed(CompoundContext context, Inode inode) throws ChimeraNFSException {
+
+        /*
+         * a pNFS data server runs without an export table, thus there is nothing to consult.
+         */
+        if (context.getExportTable() == null) {
+            return true;
+        }
+
+        FsExport export = context
+                .getExportTable()
+                .getExport(inode.exportIndex(), context.getRemoteSocketAddress().getAddress());
+        if (export == null) {
+            throw new AccessException("no export");
+        }
+
+        return export.isWithDelegations();
+    }
 
     private void checkCanAccess(CompoundContext context, Inode inode, uint32_t share_access) throws IOException {
 
@@ -323,8 +342,8 @@ public class OperationOPEN extends AbstractNFSv4Operation {
             throw new AccessException();
         }
 
-        Stat stat = context.getFs().getattr(inode);
-        switch(stat.type()) {
+        Stat.Type statType = context.getFs().getattr(inode, Stat.STAT_ATTRIBUTES_TYPE_ONLY).type();
+        switch (statType) {
             case REGULAR:
                 // OK
                 break;

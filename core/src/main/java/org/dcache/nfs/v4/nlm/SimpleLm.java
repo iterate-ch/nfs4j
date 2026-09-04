@@ -19,14 +19,16 @@
  */
 package org.dcache.nfs.v4.nlm;
 
-import com.google.common.util.concurrent.Striped;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
+
+import org.dcache.nfs.util.Opaque;
+
+import com.google.common.util.concurrent.Striped;
 
 /**
  * Simple non-distributed implementation of {@link LockManager}.
@@ -36,19 +38,17 @@ import java.util.concurrent.locks.Lock;
 public class SimpleLm extends AbstractLockManager {
 
     /*
-     * Use {@link Striped} here to split synchronized block on file locks into
-     * multiple partitions to increase concurrency, while guaranteeing atomicity
-     * on a single file.
+     * Use {@link Striped} here to split synchronized block on file locks into multiple partitions to increase
+     * concurrency, while guaranteeing atomicity on a single file.
      *
-     * Use number of stripes equals to 4x#CPU. This matches to number of
-     * worker threads configured by default.
+     * Use number of stripes equals to 4x#CPU. This matches to number of worker threads configured by default.
      *
      * FIXME: get number of threads from RPC service.
      */
     private final Striped<Lock> objLock;
 
     public SimpleLm() {
-        this(Runtime.getRuntime().availableProcessors()*4);
+        this(Runtime.getRuntime().availableProcessors() * 4);
     }
 
     public SimpleLm(int concurrency) {
@@ -58,62 +58,51 @@ public class SimpleLm extends AbstractLockManager {
     /**
      * Exclusive lock on objects locks.
      */
-    private final ConcurrentHashMap<String, List<NlmLock>> locks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Opaque, List<NlmLock>> locks = new ConcurrentHashMap<>();
 
     @Override
-    protected Lock getObjectLock(byte[] objId) {
-        String key = toKey(objId);
-        return objLock.get(key);
+    protected Lock getObjectLock(Opaque objId) {
+        return objLock.get(objId);
     }
 
     @Override
-    protected Collection<NlmLock> getActiveLocks(byte[] objId) {
-        String key = toKey(objId);
-        return locks.getOrDefault(key, Collections.emptyList());
+    protected Collection<NlmLock> getActiveLocks(Opaque objId) {
+        return locks.getOrDefault(objId, Collections.emptyList());
     }
 
     @Override
-    protected void add(byte[] objId, NlmLock lock) {
-        String key = toKey(objId);
-        Collection<NlmLock> l = locks.computeIfAbsent(key, k -> new ArrayList<>());
+    protected void add(Opaque objId, NlmLock lock) {
+        Collection<NlmLock> l = locks.computeIfAbsent(objId.toImmutableOpaque(), k -> new ArrayList<>());
         l.add(lock);
     }
 
     @Override
-    protected boolean remove(byte[] objId, NlmLock lock) {
-        String key = toKey(objId);
-        Collection<NlmLock> l = locks.get(key);
+    protected boolean remove(Opaque objId, NlmLock lock) {
+        Collection<NlmLock> l = locks.get(objId);
         boolean isRemoved = false;
         if (l != null) {
             isRemoved = l.remove(lock);
             if (l.isEmpty()) {
-                locks.remove(key);
+                locks.remove(objId);
             }
         }
         return isRemoved;
     }
 
     @Override
-    protected void addAll(byte[] objId, Collection<NlmLock> locks) {
-        String key = toKey(objId);
-        Collection<NlmLock> l = this.locks.computeIfAbsent(key, k -> new ArrayList<>());
+    protected void addAll(Opaque objId, Collection<NlmLock> locks) {
+        Collection<NlmLock> l = this.locks.computeIfAbsent(objId.toImmutableOpaque(), k -> new ArrayList<>());
         l.addAll(locks);
     }
 
     @Override
-    protected void removeAll(byte[] objId, Collection<NlmLock> locks) {
-        String key = toKey(objId);
-        Collection<NlmLock> l = this.locks.get(key);
+    protected void removeAll(Opaque objId, Collection<NlmLock> locks) {
+        Collection<NlmLock> l = this.locks.get(objId);
         if (l != null) {
             l.removeAll(locks);
             if (l.isEmpty()) {
-                this.locks.remove(key);
+                this.locks.remove(objId);
             }
         }
     }
-
-    private final String toKey(byte[] objId) {
-        return Base64.getEncoder().encodeToString(objId);
-    }
-
 }

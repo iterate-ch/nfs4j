@@ -19,20 +19,18 @@
  */
 package org.dcache.nfs.v4;
 
-import com.google.common.base.MoreObjects;
 import java.io.Serializable;
+
 import org.dcache.nfs.status.BadSeqidException;
 import org.dcache.nfs.v4.xdr.seqid4;
 import org.dcache.nfs.v4.xdr.state_owner4;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
 
 /**
  * Owner associated with the open/lock operations.
  */
 public class StateOwner implements Serializable {
-
-    private final static Logger _log = LoggerFactory.getLogger(StateOwner.class);
 
     private static final long serialVersionUID = -4712959403595550903L;
 
@@ -55,13 +53,9 @@ public class StateOwner implements Serializable {
 
         int next = seq + 1;
         if (next != openSeqid.value) {
-            _log.error("Expected next sequence id {} but received {}",
-                    next, openSeqid.value);
-            seq = openSeqid.value;
+            throw new BadSeqidException();
         }
-        else {
-            seq = next;
-        }
+        seq = next;
     }
 
     @Override
