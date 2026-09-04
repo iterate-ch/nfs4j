@@ -72,6 +72,7 @@ public class FsExport {
     private final boolean _allRoot;
     private final int _index;
     private final boolean _withPnfs;
+    private final boolean _withDelegations;
     private final List<layouttype4> _layoutTypes;
     private final boolean _requirePrivilegedClientPort;
 
@@ -118,6 +119,7 @@ public class FsExport {
         _withDcap = builder.isWithDcap();
         _allRoot = builder.isAllRoot();
         _withPnfs = builder.isWithPnfs();
+        _withDelegations = builder.isWithDelegations();
         _index = getExportIndex(_path);
 	_layoutTypes = ImmutableList.copyOf(builder.getLayoutTypes());
         _requirePrivilegedClientPort = builder.isPrivilegedClientPortRequired();
@@ -155,7 +157,9 @@ public class FsExport {
                 .append(',')
                 .append(_withDcap ? "dcap" : "no_dcap")
                 .append(',')
-                .append(_withPnfs ? "pnfs" : "nopnfs");
+                .append(_withPnfs ? "pnfs" : "nopnfs")
+                .append(',')
+                .append(_withDelegations ? "deleg" : "nodeleg");
         if (_allSquash) {
             sb.append(",all_squash");
         }
@@ -234,6 +238,15 @@ public class FsExport {
         return _withPnfs;
     }
 
+    /**
+     * Check whether the server may hand out open delegations to clients matching this export.
+     *
+     * @return true if delegations may be granted.
+     */
+    public boolean isWithDelegations() {
+        return _withDelegations;
+    }
+
     public boolean isPrivilegedClientPortRequired() {
         return _requirePrivilegedClientPort;
     }
@@ -273,6 +286,7 @@ public class FsExport {
         hash = 83 * hash + (this._allRoot ? 1 : 0);
         hash = 83 * hash + this._index;
         hash = 83 * hash + (this._withPnfs ? 1 : 0);
+        hash = 83 * hash + (this._withDelegations ? 1 : 0);
         hash = 83 * hash + Objects.hashCode(this._layoutTypes);
         return hash;
     }
@@ -313,6 +327,9 @@ public class FsExport {
         if (this._withPnfs != other._withPnfs) {
             return false;
         }
+        if (this._withDelegations != other._withDelegations) {
+            return false;
+        }
         if (!Objects.equals(this._path, other._path)) {
             return false;
         }
@@ -347,6 +364,7 @@ public class FsExport {
         private boolean _withDcap = true;
         private boolean _allRoot = false;
         private boolean _withPnfs = true;
+        private boolean _withDelegations = true;
         private final List<layouttype4> _layoutTypes = new ArrayList<>();
         private boolean _requirePrivilegedClientPort;
 
@@ -446,6 +464,16 @@ public class FsExport {
             return this;
         }
 
+        public FsExportBuilder withDelegations() {
+            _withDelegations = true;
+            return this;
+        }
+
+        public FsExportBuilder withoutDelegations() {
+            _withDelegations = false;
+            return this;
+        }
+
         public FsExportBuilder withLayoutType(layouttype4 type) {
             _layoutTypes.add(type);
             return this;
@@ -493,6 +521,10 @@ public class FsExport {
 
         public boolean isWithPnfs() {
             return _withPnfs;
+        }
+
+        public boolean isWithDelegations() {
+            return _withDelegations;
         }
 
         public List<layouttype4> getLayoutTypes() {
