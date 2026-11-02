@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2023 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,23 +19,14 @@
  */
 package org.dcache.nfs.v4;
 
-import org.dcache.nfs.ChimeraNFSException;
-import org.dcache.nfs.ExportTable;
-import org.dcache.nfs.ExportFile;
-import org.dcache.nfs.v4.xdr.*;
-import org.dcache.nfs.nfsstat;
-import org.dcache.oncrpc4j.rpc.RpcCall;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
-
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.dcache.nfs.vfs.PseudoFs;
-import org.dcache.nfs.vfs.VirtualFileSystem;
+import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.ExportFile;
+import org.dcache.nfs.ExportTable;
+import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.MinorVersMismatchException;
 import org.dcache.nfs.status.NotOnlyOpException;
 import org.dcache.nfs.status.OpNotInSessionException;
@@ -45,6 +36,13 @@ import org.dcache.nfs.status.SequencePosException;
 import org.dcache.nfs.status.TooManyOpsException;
 import org.dcache.nfs.v4.nlm.LockManager;
 import org.dcache.nfs.v4.nlm.SimpleLm;
+import org.dcache.nfs.v4.xdr.*;
+import org.dcache.nfs.vfs.PseudoFs;
+import org.dcache.nfs.vfs.VirtualFileSystem;
+import org.dcache.oncrpc4j.rpc.RpcCall;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
@@ -59,8 +57,8 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
     private final nfs_impl_id4 _implementationId;
 
     /**
-     * Verifier to indicate client that server is rebooted. Current currentTimeMillis
-     * is good enough, unless server reboots within a millisecond.
+     * Verifier to indicate client that server is rebooted. Current currentTimeMillis is good enough, unless server
+     * reboots within a millisecond.
      */
     private final verifier4 _rebootVerifier = verifier4.valueOf(System.currentTimeMillis());
 
@@ -106,12 +104,12 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
     public COMPOUND4res NFSPROC4_COMPOUND_4(RpcCall call$, COMPOUND4args arg1) {
 
         COMPOUND4res res = new COMPOUND4res();
+        res.resarray = new ArrayList<>(arg1.argarray.length);
 
         try {
 
             /*
-             * here we have to checkfor utf8, but it's too much overhead to keep
-             * spec happy.
+             * here we have to checkfor utf8, but it's too much overhead to keep spec happy.
              */
             res.tag = arg1.tag;
             String tag = arg1.tag.toString();
@@ -124,16 +122,16 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
             int minorversion = arg1.minorversion.value;
             if (minorversion > 2) {
-                throw new MinorVersMismatchException(String.format("Unsupported minor version [%d]", arg1.minorversion.value));
+                throw new MinorVersMismatchException(String.format("Unsupported minor version [%d]",
+                        arg1.minorversion.value));
             }
 
             if (arg1.argarray.length >= NFSv4Defaults.NFS4_MAX_OPS && minorversion == 0) {
                 /*
-		   in 4.1 maxops handled per session
+                 * in 4.1 maxops handled per session
                  */
                 throw new ResourceException(String.format("Too many ops [%d]", arg1.argarray.length));
             }
-            res.resarray = new ArrayList<>(arg1.argarray.length);
 
             VirtualFileSystem fs = new PseudoFs(_fs, call$, _exportTable);
 
@@ -169,7 +167,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
                     checkOpPosition(op.argop, position, arg1.argarray.length);
                     if (position == 1) {
                         /*
-                             * at this point we already have to have a session
+                         * at this point we already have to have a session
                          */
                         if (arg1.argarray.length > context.getSession().getMaxOps()) {
                             throw new TooManyOpsException(String.format("Too many ops [%d]", arg1.argarray.length));
@@ -180,9 +178,8 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
                             if (cache.isEmpty()) {
                                 /*
-                                 * we got a duplicated request, but there
-                                 * is nothing in the cache, though must be
-                                 * as we are the second op in the compound.
+                                 * we got a duplicated request, but there is nothing in the cache, though must be as we
+                                 * are the second op in the compound.
                                  */
                                 throw new RetryUncacheRepException();
                             }
@@ -212,11 +209,9 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
         } catch (ChimeraNFSException e) {
             _log.info("NFS operation failed: {}", e.getMessage());
-            res.resarray = Collections.emptyList();
             res.status = e.getStatus();
         } catch (Exception e) {
             _log.error("Unhandled exception:", e);
-            res.resarray = Collections.emptyList();
             res.status = nfsstat.NFSERR_SERVERFAULT;
         } finally {
             MDC.remove(NfsMdc.TAG);
@@ -229,6 +224,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
 
     /**
      * Get {@link NFSv4StateHandler} used by this nfs server.
+     *
      * @return state handler.
      */
     public NFSv4StateHandler getStateHandler() {
@@ -239,13 +235,10 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
      *
      * from NFSv4.1 spec:
      *
-     * SEQUENCE MUST appear as the first operation of any COMPOUND in which
-     * it appears.  The error NFS4ERR_SEQUENCE_POS will be returned when it
-     * is found in any position in a COMPOUND beyond the first.  Operations
-     * other than SEQUENCE, BIND_CONN_TO_SESSION, EXCHANGE_ID,
-     * CREATE_SESSION, and DESTROY_SESSION, MUST NOT appear as the first
-     * operation in a COMPOUND.  Such operations MUST yield the error
-     * NFS4ERR_OP_NOT_IN_SESSION if they do appear at the start of a
+     * SEQUENCE MUST appear as the first operation of any COMPOUND in which it appears. The error NFS4ERR_SEQUENCE_POS
+     * will be returned when it is found in any position in a COMPOUND beyond the first. Operations other than SEQUENCE,
+     * BIND_CONN_TO_SESSION, EXCHANGE_ID, CREATE_SESSION, and DESTROY_SESSION, MUST NOT appear as the first operation in
+     * a COMPOUND. Such operations MUST yield the error NFS4ERR_OP_NOT_IN_SESSION if they do appear at the start of a
      * COMPOUND.
      *
      */
@@ -258,8 +251,8 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
             return;
         }
 
-        if(position == 0 ) {
-            switch(opCode) {
+        if (position == 0) {
+            switch (opCode) {
                 case nfs_opnum4.OP_SEQUENCE:
                 case nfs_opnum4.OP_CREATE_SESSION:
                 case nfs_opnum4.OP_EXCHANGE_ID:
@@ -277,7 +270,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
                     case nfs_opnum4.OP_EXCHANGE_ID:
                         throw new NotOnlyOpException();
                     default:
-                    // NOP
+                        // NOP
                 }
             }
 
@@ -290,7 +283,7 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
     }
 
     private static int statusOfLastOperation(List<nfs_resop4> ops) {
-        return ops.get(ops.size() -1).getStatus();
+        return ops.get(ops.size() - 1).getStatus();
     }
 
     public static class Builder {
@@ -339,10 +332,12 @@ public class NFSServerV41 extends nfs4_prot_NFS4_PROGRAM_ServerStub {
             this.implementationDomain = implementationDomain;
             return this;
         }
+
         public Builder withImplementationDate(Instant implementationDate) {
             this.implementationDate = implementationDate;
             return this;
         }
+
         /**
          * @deprecated Use {@link #withExportTable}
          */

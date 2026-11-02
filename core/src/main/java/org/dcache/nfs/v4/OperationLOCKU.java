@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2018 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -69,13 +69,14 @@ public class OperationLOCKU extends AbstractNFSv4Operation {
 
             lock_state = client.state(lockStateid);
             lockOwner = lock_state.getStateOwner();
-            if (context.getMinorversion() == 0) {
-                lockOwner.acceptAsNextSequence(_args.oplocku.seqid);
+            if (context.acquireSequence(lockOwner, _args.oplocku.seqid)) {
+                return;
             }
 
-            NlmLock lock = new NlmLock(lockOwner, _args.oplocku.locktype, _args.oplocku.offset.value, _args.oplocku.length.value);
+            NlmLock lock = new NlmLock(lockOwner, _args.oplocku.locktype, _args.oplocku.offset.value,
+                    _args.oplocku.length.value);
             try {
-                context.getLm().unlock(inode.getFileId(), lock);
+                context.getLm().unlock(inode.getLockKey(), lock);
             } catch (LockRangeUnavailabeException e) {
                 // posix locks allows unlocking of not locked regions
             }

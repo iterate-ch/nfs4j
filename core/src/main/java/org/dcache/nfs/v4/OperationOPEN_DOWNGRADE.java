@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2017 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -46,13 +46,13 @@ public class OperationOPEN_DOWNGRADE extends AbstractNFSv4Operation {
 
         final OPEN_DOWNGRADE4res res = result.opopen_downgrade;
 
-        final int shareAccess = _args.opopen_downgrade.share_access.value & ~nfs4_prot.OPEN4_SHARE_ACCESS_WANT_DELEG_MASK;
+        final int shareAccess = _args.opopen_downgrade.share_access.value
+                & ~nfs4_prot.OPEN4_SHARE_ACCESS_WANT_DELEG_MASK;
         final int shareDeny = _args.opopen_downgrade.share_deny.value & ~nfs4_prot.OPEN4_SHARE_ACCESS_WANT_DELEG_MASK;
 
         /*
-         * Share access must be one of OPEN4_SHARE_ACCESS_READ, OPEN4_SHARE_ACCESS_WRITE
-         * or OPEN4_SHARE_ACCESS_BOTH. Share deny can be zero or one of
-         * OPEN4_SHARE_DENY_READ, OPEN4_SHARE_DENY_WRITE or OPEN4_SHARE_DENY_BOTH.
+         * Share access must be one of OPEN4_SHARE_ACCESS_READ, OPEN4_SHARE_ACCESS_WRITE or OPEN4_SHARE_ACCESS_BOTH.
+         * Share deny can be zero or one of OPEN4_SHARE_DENY_READ, OPEN4_SHARE_DENY_WRITE or OPEN4_SHARE_DENY_BOTH.
          */
         if ((shareAccess & nfs4_prot.OPEN4_SHARE_ACCESS_BOTH) == 0) {
             throw new InvalException("Invalid share access mode");
@@ -76,11 +76,10 @@ public class OperationOPEN_DOWNGRADE extends AbstractNFSv4Operation {
         }
 
         NFS4State nfsState = client.state(stateid);
-        Stateids.checkStateId(nfsState.stateid(), stateid);
-
-        if (context.getMinorversion() == 0) {
-            nfsState.getStateOwner().acceptAsNextSequence(_args.opopen_downgrade.seqid);
+        if (context.acquireSequence(nfsState.getStateOwner(), _args.opopen_downgrade.seqid)) {
+            return;
         }
+        Stateids.checkStateId(nfsState.stateid(), stateid);
 
         res.status = nfsstat.NFS_OK;
         res.resok4 = new OPEN_DOWNGRADE4resok();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2023 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,36 +19,39 @@
  */
 package org.dcache.nfs.v4;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.net.InetSocketAddress;
 import java.security.Principal;
-
-import com.sun.security.auth.UnixNumericUserPrincipal;
-import org.dcache.nfs.ChimeraNFSException;
-import org.dcache.nfs.ExportTable;
-import org.dcache.nfs.v4.xdr.nfs_impl_id4;
-import org.dcache.nfs.v4.xdr.nfs_resop4;
-import org.dcache.nfs.v4.xdr.server_owner4;
-import org.dcache.nfs.v4.xdr.stateid4;
-import org.dcache.nfs.v4.xdr.uint64_t;
-import org.dcache.nfs.v4.xdr.verifier4;
-import org.dcache.oncrpc4j.rpc.RpcCall;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
-import org.dcache.nfs.vfs.Inode;
+
+import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.ExportTable;
 import org.dcache.nfs.status.BadStateidException;
 import org.dcache.nfs.status.NoFileHandleException;
 import org.dcache.nfs.status.RestoreFhException;
 import org.dcache.nfs.v4.nlm.LockManager;
+import org.dcache.nfs.v4.xdr.nfs_impl_id4;
+import org.dcache.nfs.v4.xdr.nfs_resop4;
+import org.dcache.nfs.v4.xdr.seqid4;
+import org.dcache.nfs.v4.xdr.server_owner4;
+import org.dcache.nfs.v4.xdr.stateid4;
+import org.dcache.nfs.v4.xdr.uint64_t;
+import org.dcache.nfs.v4.xdr.verifier4;
+import org.dcache.nfs.vfs.Inode;
 import org.dcache.nfs.vfs.VirtualFileSystem;
-import org.dcache.oncrpc4j.rpc.net.InetSocketAddresses;
 import org.dcache.oncrpc4j.rpc.RpcAuthType;
+import org.dcache.oncrpc4j.rpc.RpcCall;
+import org.dcache.oncrpc4j.rpc.net.InetSocketAddresses;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import com.sun.security.auth.UnixNumericUserPrincipal;
 
 public class CompoundContext {
 
@@ -56,24 +59,25 @@ public class CompoundContext {
 
     private static final Principal NO_PRINCIPAL = new Principal() {
 
-            private final String _name = "";
+        private final String _name = "";
 
-            @Override
-            public String getName() {
-                return _name;
-            }
+        @Override
+        public String getName() {
+            return _name;
+        }
 
-            @Override
-            public int hashCode() {
-                return getName().hashCode();
-            }
+        @Override
+        public int hashCode() {
+            return getName().hashCode();
+        }
 
-            @Override
-            public boolean equals(Object obj) {
-                if (obj == this) return true;
-                return obj != null && obj.getClass().isInstance(this);
-            }
-        };
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this)
+                return true;
+            return obj != null && obj.getClass().isInstance(this);
+        }
+    };
 
     private Inode _currentInode = null;
     private Inode _savedInode = null;
@@ -98,6 +102,19 @@ public class CompoundContext {
     private final verifier4 _rebootVerifier;
 
     private final nfs_impl_id4 _implId;
+
+    /**
+     * State owners and sequence ids acquired by the currently executed nfsv4.0 operation.
+     */
+    private final List<SequencedOwner> _sequencedOwners = new ArrayList<>(2);
+
+    /**
+     * Cached reply to answer the currently executed nfsv4.0 operation with, if it's a retransmission.
+     */
+    private StateOwner.Reply _replay;
+
+    private record SequencedOwner(StateOwner owner, seqid4 seqid) {
+    }
 
     /**
      * Create context of COUMPOUND request.
@@ -142,8 +159,8 @@ public class CompoundContext {
     }
 
     /**
-     * Get NFSv4 minor version number. The version number os provided by client
-     * for each compound.
+     * Get NFSv4 minor version number. The version number os provided by client for each compound.
+     *
      * @return version number.
      */
     public int getMinorversion() {
@@ -151,14 +168,13 @@ public class CompoundContext {
     }
 
     /**
-     * Current file handle is a server side variable passed from one operation
-     * to other inside a compound.
+     * Current file handle is a server side variable passed from one operation to other inside a compound.
      *
      * @return file handle
      * @throws ChimeraNFSException
      */
     public Inode currentInode() throws ChimeraNFSException {
-        if( _currentInode == null ) {
+        if (_currentInode == null) {
             throw new NoFileHandleException("no file handle");
         }
         return _currentInode;
@@ -172,7 +188,7 @@ public class CompoundContext {
      */
     public void currentInode(Inode inode) throws ChimeraNFSException {
         _currentInode = inode;
-        _log.debug("current Inode: {}",  _currentInode );
+        _log.debug("current Inode: {}", _currentInode);
     }
 
     /**
@@ -185,44 +201,45 @@ public class CompoundContext {
     }
 
     /**
-     * Set the current file handle to the value in the saved file handle.
-     * If there is no saved filehandle then the server will return the
-     * error NFS4ERR_RESTOREFH.
+     * Set the current file handle to the value in the saved file handle. If there is no saved filehandle then the
+     * server will return the error NFS4ERR_RESTOREFH.
+     *
      * @throws ChimeraNFSException
      */
     public void restoreSavedInode() throws ChimeraNFSException {
-        if( _savedInode == null ) {
+        if (_savedInode == null) {
             throw new RestoreFhException("no saved file handle");
         }
         _currentInode = _savedInode;
         _currentStateid = _savedStateid;
-        _log.debug("restored Inode: {}",  _currentInode );
+        _log.debug("restored Inode: {}", _currentInode);
     }
 
     public Inode savedInode() throws ChimeraNFSException {
-        if( _savedInode == null ) {
+        if (_savedInode == null) {
             throw new NoFileHandleException("no file handle");
         }
         return _savedInode;
     }
 
     /**
-     * Save the current filehandle. If a previous filehandle was saved then it
-     * is no longer accessible. The saved filehandle can be restored as
-     * the current filehandle with the RESTOREFH operator.
+     * Save the current filehandle. If a previous filehandle was saved then it is no longer accessible. The saved
+     * filehandle can be restored as the current filehandle with the RESTOREFH operator.
+     *
      * @throws ChimeraNFSException
      */
     public void saveCurrentInode() throws ChimeraNFSException {
-        if( _currentInode == null ) {
+        if (_currentInode == null) {
             throw new NoFileHandleException("no file handle");
         }
         _savedInode = _currentInode;
         _savedStateid = _currentStateid;
-        _log.debug("saved Inode: {}", _savedInode );
+        _log.debug("saved Inode: {}", _savedInode);
     }
 
     /**
      * Set NFSv4.1 session of current request.
+     *
      * @param session
      */
     public void setSession(NFSv41Session session) {
@@ -231,6 +248,7 @@ public class CompoundContext {
 
     /**
      * Get {@link NFSv41Session} used by current request.
+     *
      * @return current session
      */
     public NFSv41Session getSession() {
@@ -243,6 +261,7 @@ public class CompoundContext {
 
     /**
      * Get sessions reply cache slot which must be used by this request.
+     *
      * @return session's reply cache slot
      */
     public SessionSlot getSessionSlot() {
@@ -251,6 +270,7 @@ public class CompoundContext {
 
     /**
      * Set session's reply cache slot to be used.
+     *
      * @param slot reply cache slot to be used.
      */
     public void setSessionSlot(SessionSlot slot) {
@@ -275,8 +295,60 @@ public class CompoundContext {
         _cache = cache;
     }
 
+    /**
+     * Acquire the sequence of a nfsv4.0 open- or lock-owner for the currently executed operation, see
+     * rfc7530#section-9.1.7. If the request is a retransmission, the operation must return immediately; it will be
+     * answered with the cached reply of the original request. Otherwise, the reply of the operation is recorded as the
+     * owner's last reply once the operation is complete. For minor versions with sessions this is a no-op.
+     *
+     * @param owner the state owner which sequences the operation.
+     * @param seqid the sequence id of the request.
+     * @return true if the request is a retransmission.
+     * @throws ChimeraNFSException if the sequence id is out of order or the request is still in progress.
+     */
+    public boolean acquireSequence(StateOwner owner, seqid4 seqid) throws ChimeraNFSException {
+        if (_minorversion != 0) {
+            return false;
+        }
+
+        StateOwner.Reply reply = owner.acquire(seqid);
+        if (reply != null) {
+            _replay = reply;
+            return true;
+        }
+
+        _sequencedOwners.add(new SequencedOwner(owner, seqid));
+        return false;
+    }
+
+    /**
+     * Complete the sequence of the executed operation acquired by {@link #acquireSequence(StateOwner, seqid4)}. If the
+     * request was a retransmission, the current file handle and stateid are restored and the cached reply is returned.
+     * Otherwise, the result is recorded as the reply of the state owners and returned.
+     *
+     * @param result the result of the executed operation.
+     * @return the reply to send to the client.
+     */
+    public nfs_resop4 completeSequence(nfs_resop4 result) {
+
+        if (_replay != null) {
+            _sequencedOwners.forEach(s -> s.owner().release());
+            _sequencedOwners.clear();
+            _currentInode = _replay.currentInode();
+            _currentStateid = _replay.currentStateid();
+            nfs_resop4 reply = _replay.result();
+            _replay = null;
+            return reply;
+        }
+
+        StateOwner.Reply reply = new StateOwner.Reply(result, _currentInode, _currentStateid);
+        _sequencedOwners.forEach(s -> s.owner().update(s.seqid(), reply));
+        _sequencedOwners.clear();
+        return result;
+    }
+
     public stateid4 currentStateid() throws ChimeraNFSException {
-        if(_currentStateid == null)
+        if (_currentStateid == null)
             throw new BadStateidException("no current stateid");
         return _currentStateid;
     }
@@ -297,8 +369,7 @@ public class CompoundContext {
             public server_owner4 getOwner() {
                 server_owner4 owner = new server_owner4();
                 owner.so_minor_id = new uint64_t(0);
-                owner.so_major_id = InetSocketAddresses.uaddrOf(_callInfo.
-                        getTransport()
+                owner.so_major_id = InetSocketAddresses.uaddrOf(_callInfo.getTransport()
                         .getLocalSocketAddress())
                         .getBytes(UTF_8);
 
@@ -323,7 +394,7 @@ public class CompoundContext {
     private Principal principalOf(final RpcCall call) {
 
         Class<? extends Principal> type;
-        if(call.getCredential().type() == RpcAuthType.RPCGSS_SEC) {
+        if (call.getCredential().type() == RpcAuthType.RPCGSS_SEC) {
             type = KerberosPrincipal.class;
         } else {
             type = UnixNumericUserPrincipal.class;
@@ -337,6 +408,7 @@ public class CompoundContext {
 
     /**
      * Returns the address of local endpoint which have received the requests.
+     *
      * @return a socketAddress representing the local endpoint.
      */
     public InetSocketAddress getRemoteSocketAddress() {
@@ -354,6 +426,7 @@ public class CompoundContext {
 
     /**
      * Return verifier to indicate server reboot.
+     *
      * @return reboot verifier.
      */
     public verifier4 getRebootVerifier() {

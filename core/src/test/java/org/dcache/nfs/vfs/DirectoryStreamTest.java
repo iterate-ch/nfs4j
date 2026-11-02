@@ -1,12 +1,15 @@
 package org.dcache.nfs.vfs;
 
-import com.google.common.primitives.Ints;
+import static org.junit.Assert.*;
+
 import java.util.NavigableSet;
 import java.util.TreeSet;
+
 import org.dcache.nfs.v4.xdr.verifier4;
-import org.junit.Test;
-import static org.junit.Assert.*;
 import org.junit.Before;
+import org.junit.Test;
+
+import com.google.common.primitives.Ints;
 
 /**
  *
@@ -14,6 +17,7 @@ import org.junit.Before;
 public class DirectoryStreamTest {
 
     private DirectoryStream stream;
+
     @Before
     public void setUp() {
 
@@ -21,8 +25,7 @@ public class DirectoryStreamTest {
         byte[] verifier = verifier4.valueOf(System.currentTimeMillis()).value;
 
         for (int i = 0; i < 10; i++) {
-            FileHandle fh = new FileHandle(0, 0, 0, Ints.toByteArray(i));
-            Inode inode = new Inode(fh);
+            Inode inode = Inode.forFile(Ints.toByteArray(i));
             Stat stat = new Stat();
 
             stat.setMode(Stat.S_IFDIR | 0755);
@@ -52,7 +55,8 @@ public class DirectoryStreamTest {
 
     @Test
     public void testTransform() {
-        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(), d.getStat(), d.getCookie()));
+        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(),
+                d.getStat(), d.getCookie()));
         assertArrayEquals(stream.getVerifier(), transformed.getVerifier());
         for (DirectoryEntry e : transformed) {
             assertTrue(e.getName().startsWith("FILE"));
@@ -62,7 +66,8 @@ public class DirectoryStreamTest {
     @Test
     public void testTransformAndTail() {
 
-        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(), d.getStat(), d.getCookie()));
+        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(),
+                d.getStat(), d.getCookie()));
         DirectoryStream tail = transformed.tail(3);
         DirectoryEntry next = tail.iterator().next();
 
@@ -73,7 +78,8 @@ public class DirectoryStreamTest {
 
     @Test
     public void testMultipleTransformAndTail() {
-        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(), d.getStat(), d.getCookie()));
+        DirectoryStream transformed = stream.transform(d -> new DirectoryEntry(d.getName().toUpperCase(), d.getInode(),
+                d.getStat(), d.getCookie()));
         DirectoryStream tail = transformed.tail(3).tail(5);
         DirectoryEntry next = tail.iterator().next();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -55,7 +55,7 @@ public class OperationLOCK extends AbstractNFSv4Operation {
         // to enforce current file handle existence check
         Inode inode = context.currentInode();
 
-        if(_args.oplock.length.value == 0) {
+        if (_args.oplock.length.value == 0) {
             throw new InvalException("zero lock len");
         }
 
@@ -69,20 +69,31 @@ public class OperationLOCK extends AbstractNFSv4Operation {
         if (_args.oplock.locker.new_lock_owner) {
             oldStateid = Stateids.getCurrentStateidIfNeeded(context, _args.oplock.locker.open_owner.open_stateid);
 
-            if(context.getMinorversion() == 0) {
-                client = context.getStateHandler().getConfirmedClient(_args.oplock.locker.open_owner.lock_owner.clientid);
+            if (context.getMinorversion() == 0) {
+                client = context.getStateHandler().getConfirmedClient(
+                        _args.oplock.locker.open_owner.lock_owner.clientid);
             } else {
                 client = context.getSession().getClient();
             }
 
             NFS4State openState = client.state(oldStateid);
+
+            // the request is a retransmission if any of the sequence ids matches the last request,
+            // rfc7530#section-9.1.9
+            if (context.acquireSequence(openState.getStateOwner(), _args.oplock.locker.open_owner.open_seqid)) {
+                return;
+            }
+            lockOwner = client.getOrCreateOwner(_args.oplock.locker.open_owner.lock_owner.owner,
+                    _args.oplock.locker.open_owner.lock_seqid);
+            if (context.acquireSequence(lockOwner, _args.oplock.locker.open_owner.lock_seqid)) {
+                return;
+            }
             Stateids.checkStateId(openState.stateid(), oldStateid);
+
             if (context.getMinorversion() == 0) {
-                openState.getStateOwner().acceptAsNextSequence(_args.oplock.locker.open_owner.open_seqid);
                 client.updateLeaseTime();
             }
 
-            lockOwner = client.getOrCreateOwner(_args.oplock.locker.open_owner.lock_owner.owner, _args.oplock.locker.open_owner.lock_seqid);
             lock_state = client.createLockState(lockOwner, openState);
 
             // lock states do not requires extra confirmation
@@ -92,34 +103,37 @@ public class OperationLOCK extends AbstractNFSv4Operation {
             oldStateid = Stateids.getCurrentStateidIfNeeded(context, _args.oplock.locker.lock_owner.lock_stateid);
             client = context.getStateHandler().getClientIdByStateId(oldStateid);
             lock_state = client.state(oldStateid);
+            lockOwner = lock_state.getStateOwner();
+            if (context.acquireSequence(lockOwner, _args.oplock.locker.lock_owner.lock_seqid)) {
+                return;
+            }
             Stateids.checkStateId(lock_state.stateid(), oldStateid);
 
-            lockOwner = lock_state.getStateOwner();
             if (context.getMinorversion() == 0) {
-                lockOwner.acceptAsNextSequence(_args.oplock.locker.lock_owner.lock_seqid);
                 client.updateLeaseTime();
             }
         }
 
         try {
 
-            // reject write lock  on read-only open
+            // reject write lock on read-only open
             if (_args.oplock.locktype == nfs_lock_type4.WRITEW_LT || _args.oplock.locktype == nfs_lock_type4.WRITE_LT) {
 
                 int shareAccess = context.getStateHandler().getFileTracker()
-                    .getShareAccess(client, inode, lock_state.getOpenState().stateid());
+                        .getShareAccess(client, inode, lock_state.getOpenState().stateid());
 
                 if ((shareAccess & nfs4_prot.OPEN4_SHARE_ACCESS_WRITE) == 0) {
                     throw new OpenModeException("Invalid open mode");
                 }
             }
 
-            NlmLock lock = new NlmLock(lockOwner, _args.oplock.locktype,  _args.oplock.offset.value, _args.oplock.length.value);
-            context.getLm().lock(inode.getFileId(), lock);
+            NlmLock lock = new NlmLock(lockOwner, _args.oplock.locktype, _args.oplock.offset.value,
+                    _args.oplock.length.value);
+            context.getLm().lock(inode.getLockKey(), lock);
 
             // ensure, that on close locks will be released
             lock_state.addDisposeListener(s -> {
-                context.getLm().unlockIfExists(inode.getFileId(), lock);
+                context.getLm().unlockIfExists(inode.getLockKey(), lock);
             });
 
             // FIXME: we might run into race condition, thus updating sedid must be fenced!

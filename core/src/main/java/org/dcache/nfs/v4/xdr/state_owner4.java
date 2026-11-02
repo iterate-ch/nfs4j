@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2015 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -20,44 +20,45 @@
 package org.dcache.nfs.v4.xdr;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.Objects;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.io.BaseEncoding;
-import java.io.Serializable;
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
 
+import com.google.common.base.MoreObjects;
+
 public class state_owner4 implements XdrAble, Serializable {
 
     private static final long serialVersionUID = -7146149387990285155L;
     public clientid4 clientid;
-    public byte [] owner;
+    public byte[] owner;
 
     public state_owner4() {
     }
 
-    public state_owner4(state_owner4  stateOwner) {
+    public state_owner4(state_owner4 stateOwner) {
         clientid = stateOwner.clientid;
         owner = stateOwner.owner;
     }
 
     public state_owner4(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         xdrDecode(xdr);
     }
 
     public void xdrEncode(XdrEncodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         clientid.xdrEncode(xdr);
         xdr.xdrEncodeDynamicOpaque(owner);
     }
 
     public void xdrDecode(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         clientid = new clientid4(xdr);
         owner = xdr.xdrDecodeDynamicOpaque();
     }
@@ -90,7 +91,7 @@ public class state_owner4 implements XdrAble, Serializable {
     public String toString() {
         return MoreObjects.toStringHelper(this.getClass().getSimpleName())
                 .add("clientid", Long.toString(clientid.value, 16))
-                .add("ownerid", BaseEncoding.base16().lowerCase().encode(owner))
+                .add("ownerid", HexFormat.of().formatHex(owner))
                 .toString();
     }
 }

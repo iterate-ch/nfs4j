@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2019 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 package org.dcache.nfs.v4;
 
 import java.io.IOException;
+
 import org.dcache.nfs.ChimeraNFSException;
 import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.BadSessionException;
@@ -41,8 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An abstract implementation of {@code RequestExecutor} that provides a generic
- * framework for nfs request execution.
+ * An abstract implementation of {@code RequestExecutor} that provides a generic framework for nfs request execution.
  */
 public abstract class AbstractOperationExecutor implements OperationExecutor {
 
@@ -71,16 +71,21 @@ public abstract class AbstractOperationExecutor implements OperationExecutor {
         } catch (OncRpcException e) {
             opResult.setStatus(nfsstat.NFSERR_BADXDR);
             LOGGER.warn("Bad xdr: {}: ", e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error: op: {} : {}", nfs_opnum4.toString(args.argop), e.getMessage(), e);
+            opResult.setStatus(nfsstat.NFSERR_SERVERFAULT);
+        } finally {
+            // record the reply of nfsv4.0 sequenced operations or replace it with the cached one on retransmission
+            opResult = context.completeSequence(opResult);
         }
         return opResult;
     }
 
     /**
-     * Get an implementation of {@link AbstractNFSv4Operation} that should
-     * be executed for given nfs operation.
+     * Get an implementation of {@link AbstractNFSv4Operation} that should be executed for given nfs operation.
+     *
      * @param op nfs operation arguments.
-     * @return an implementation of {@link AbstractNFSv4Operation} that should
-     * be executed for given nfs operation.
+     * @return an implementation of {@link AbstractNFSv4Operation} that should be executed for given nfs operation.
      */
     abstract protected AbstractNFSv4Operation getOperation(nfs_argop4 op);
 }

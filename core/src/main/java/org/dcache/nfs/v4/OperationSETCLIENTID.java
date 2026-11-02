@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2017 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,18 +19,18 @@
  */
 package org.dcache.nfs.v4;
 
-import org.dcache.nfs.nfsstat;
-import org.dcache.nfs.v4.xdr.verifier4;
-import org.dcache.nfs.v4.xdr.nfs_argop4;
-import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.SETCLIENTID4resok;
-import org.dcache.nfs.v4.xdr.SETCLIENTID4res;
 import org.dcache.nfs.ChimeraNFSException;
+import org.dcache.nfs.nfsstat;
 import org.dcache.nfs.status.ClidInUseException;
 import org.dcache.nfs.status.NotSuppException;
+import org.dcache.nfs.v4.xdr.SETCLIENTID4res;
+import org.dcache.nfs.v4.xdr.SETCLIENTID4resok;
 import org.dcache.nfs.v4.xdr.clientaddr4;
 import org.dcache.nfs.v4.xdr.netaddr4;
+import org.dcache.nfs.v4.xdr.nfs_argop4;
+import org.dcache.nfs.v4.xdr.nfs_opnum4;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
+import org.dcache.nfs.v4.xdr.verifier4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,28 +55,70 @@ public class OperationSETCLIENTID extends AbstractNFSv4Operation {
         final byte[] id = _args.opsetclientid.client.id;
         NFS4Client client = context.getStateHandler().clientByOwner(id);
 
-        if (client != null && client.isConfirmed() && client.isLeaseValid()) {
 
-            if (!client.principal().equals(context.getPrincipal())) {
-                netaddr4 addr = new netaddr4(client.getRemoteAddress());
-                res.status = nfsstat.NFSERR_CLID_INUSE;
-                res.client_using = new clientaddr4(addr);
-                throw new ClidInUseException();
-            }
-            client.reset();
-
-        } else {
+        if (client == null) {
+            // new client
             client = context.getStateHandler().createClient(
                     context.getRemoteSocketAddress(),
                     context.getLocalSocketAddress(),
                     context.getMinorversion(),
                     _args.opsetclientid.client.id, _args.opsetclientid.client.verifier,
                     context.getPrincipal(), false);
+        } else if (!client.isConfirmed()) {
+
+            // existing client, but not confirmed. either retry or client restarted before confirmation
+            context.getStateHandler().removeClient(client);
+            client = context.getStateHandler().createClient(
+                    context.getRemoteSocketAddress(),
+                    context.getLocalSocketAddress(),
+                    context.getMinorversion(),
+                    _args.opsetclientid.client.id, _args.opsetclientid.client.verifier,
+                    context.getPrincipal(), false);
+
+        } else if (!client.clientGeneratedVerifierEquals(verifier)) {
+
+            // existing client, different verifier. Client rebooted.
+            // remove any existing unconfirmed record as required by RFC 7530
+            // Section 16.33.5 (confirmed {u,x,c,l,s} + unconfirmed {w,x,d,m,t}
+            // → remove unconfirmed, create new unconfirmed {v,x,e,k,r})
+            NFS4Client unconfirmed = context.getStateHandler().getUnconfirmedClientByOwner(id);
+            if (unconfirmed != null && !unconfirmed.getId().equals(client.getId())) {
+                context.getStateHandler().removeClient(unconfirmed);
+            }
+
+            // create new record, keep the old one as required by the RFC 7530
+            NFS4Client oldClient = client;
+            client = context.getStateHandler().createClient(
+                    context.getRemoteSocketAddress(),
+                    context.getLocalSocketAddress(),
+                    context.getMinorversion(),
+                    _args.opsetclientid.client.id, _args.opsetclientid.client.verifier,
+                    context.getPrincipal(), false);
+
+            // expire old client's lease so that any operation on old
+            // stateids returns NFS4ERR_EXPIRED (RFC 7530 Section 16.33.5,
+            // states are not removed but become unusable)
+            oldClient.expireLease();
+
+        } else {
+
+            // v == u: probable callback info update (RFC 7530 Section 16.33.5)
+            // CLID_INUSE only if lease is still valid (RFC 7530 Section 9.1.2)
+            if (client.isLeaseValid()
+                    && !client.principal().equals(context.getPrincipal())
+                    && client.hasState()) {
+                netaddr4 addr = new netaddr4(client.getRemoteAddress());
+                res.status = nfsstat.NFSERR_CLID_INUSE;
+                res.client_using = new clientaddr4(addr);
+                throw new ClidInUseException();
+            }
+
+            client.reset();
         }
 
         res.resok4 = new SETCLIENTID4resok();
         res.resok4.clientid = client.getId();
-        res.resok4.setclientid_confirm = client.verifier();
+        res.resok4.setclientid_confirm = client.serverGeneratedVerifier();
         res.status = nfsstat.NFS_OK;
     }
 }

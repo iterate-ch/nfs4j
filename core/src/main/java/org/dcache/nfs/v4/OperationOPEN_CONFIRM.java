@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2017 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -20,17 +20,17 @@
 package org.dcache.nfs.v4;
 
 import java.io.IOException;
+
 import org.dcache.nfs.nfsstat;
-import org.dcache.nfs.v4.xdr.stateid4;
-import org.dcache.nfs.v4.xdr.nfs_argop4;
-import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.OPEN_CONFIRM4resok;
-import org.dcache.nfs.v4.xdr.OPEN_CONFIRM4res;
 import org.dcache.nfs.status.InvalException;
 import org.dcache.nfs.status.IsDirException;
 import org.dcache.nfs.status.NotSuppException;
+import org.dcache.nfs.v4.xdr.OPEN_CONFIRM4res;
+import org.dcache.nfs.v4.xdr.OPEN_CONFIRM4resok;
+import org.dcache.nfs.v4.xdr.nfs_argop4;
+import org.dcache.nfs.v4.xdr.nfs_opnum4;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
-import org.dcache.nfs.vfs.Inode;
+import org.dcache.nfs.v4.xdr.stateid4;
 import org.dcache.nfs.vfs.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,14 +52,13 @@ public class OperationOPEN_CONFIRM extends AbstractNFSv4Operation {
             throw new NotSuppException("operation OPEN_CONFIRM4 is obsolete in 4.x, x > 0");
         }
 
-        Inode inode = context.currentInode();
-        Stat stat = context.getFs().getattr(context.currentInode());
+        Stat.Type statType = context.getFs().getattr(context.currentInode(), Stat.STAT_ATTRIBUTES_TYPE_ONLY).type();
 
-        if (stat.type() == Stat.Type.DIRECTORY) {
+        if (statType == Stat.Type.DIRECTORY) {
             throw new IsDirException();
         }
 
-        if (stat.type() == Stat.Type.SYMLINK) {
+        if (statType == Stat.Type.SYMLINK) {
             throw new InvalException();
         }
 
@@ -68,7 +67,9 @@ public class OperationOPEN_CONFIRM extends AbstractNFSv4Operation {
 
         NFS4Client client = context.getStateHandler().getClientIdByStateId(stateid);
         NFS4State state = client.state(stateid);
-        state.getStateOwner().acceptAsNextSequence(_args.opopen_confirm.seqid);
+        if (context.acquireSequence(state.getStateOwner(), _args.opopen_confirm.seqid)) {
+            return;
+        }
 
         state.bumpSeqid();
         state.confirm();

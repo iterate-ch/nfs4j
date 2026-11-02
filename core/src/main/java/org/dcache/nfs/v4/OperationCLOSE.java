@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -20,11 +20,12 @@
 package org.dcache.nfs.v4;
 
 import java.io.IOException;
+
+import org.dcache.nfs.ChimeraNFSException;
 import org.dcache.nfs.nfsstat;
+import org.dcache.nfs.v4.xdr.CLOSE4res;
 import org.dcache.nfs.v4.xdr.nfs_argop4;
 import org.dcache.nfs.v4.xdr.nfs_opnum4;
-import org.dcache.nfs.v4.xdr.CLOSE4res;
-import org.dcache.nfs.ChimeraNFSException;
 import org.dcache.nfs.v4.xdr.nfs_resop4;
 import org.dcache.nfs.v4.xdr.stateid4;
 import org.dcache.nfs.vfs.Inode;
@@ -56,10 +57,12 @@ public class OperationCLOSE extends AbstractNFSv4Operation {
 
         Stateids.checkOpenStateid(stateid);
         NFS4State nfsState = client.state(stateid);
+        if (context.acquireSequence(nfsState.getStateOwner(), _args.opclose.seqid)) {
+            return;
+        }
         Stateids.checkStateId(nfsState.stateid(), stateid);
 
         if (context.getMinorversion() == 0) {
-            nfsState.getStateOwner().acceptAsNextSequence(_args.opclose.seqid);
             client.updateLeaseTime();
         }
 

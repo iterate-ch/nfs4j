@@ -5,19 +5,36 @@ on:
   pull_request:
     types: [opened, reopened]
 
+env:
+  JACOCO_VERSION: "0.8.14"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
           cache: maven
+
+      - name: Cache JaCoCo CLI
+        id: cache-jacoco
+        uses: actions/cache@v4
+        with:
+            path: ${{ github.workspace }}/jacoco-${{ env.JACOCO_VERSION }}
+            key: ${{ runner.os }}-jacoco-cli-${{ env.JACOCO_VERSION }}
+
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots package
+
+      - name: Get JaCoCo CLI
+        run: |
+         chmod +x ./get-jacoco.sh
+         ./get-jacoco.sh
 
       - name: JUnit test report
         uses: mikepenz/action-junit-report@v5
@@ -28,7 +45,9 @@ jobs:
 
       - name: Run pynfs tests in container
         id: tester
-        run: COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f full-test.yml up --build --quiet-pull --exit-code-from tester
+        run: |
+          pip3 install podman-compose
+          podman-compose -f full-test.yml up --build --quiet-pull --exit-code-from tester
 
       - name: Pynfs Test Report
         uses: mikepenz/action-junit-report@v5
@@ -36,3 +55,14 @@ jobs:
         with:
           check_name: pynfs protocol compatibility test
           report_paths: "report/*.xml"
+
+      - name: Generate JaCoCo Report
+        run: |
+            chmod +x ./generate-jacoco-report.sh
+            ./generate-jacoco-report.sh
+
+      - name: Upload JaCoCo Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: JaCoCo Coverage Report
+          path: target/coverage-reports/site

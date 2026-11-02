@@ -19,17 +19,17 @@
  */
 package org.dcache.nfs;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.stream.Stream;
-import org.dcache.nfs.v4.xdr.layouttype4;
 
+import org.dcache.nfs.v4.xdr.layouttype4;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class FsExportTest {
 
@@ -54,8 +54,8 @@ public class FsExportTest {
         FsExport export1 = _exportFile.getExport("/trusted", trusted);
         FsExport export2 = _exportFile.getExport("/trusted", nontrusted);
 
-        assertTrue("trusted host not respected", export1.isTrusted() );
-        assertFalse("nontrusted host respected", export2.isTrusted() );
+        assertTrue("trusted host not respected", export1.isTrusted());
+        assertFalse("nontrusted host respected", export2.isTrusted());
     }
 
     @Test
@@ -79,7 +79,6 @@ public class FsExportTest {
         FsExport export1 = _exportFile.getExport("/subnet_c", allowed);
         FsExport export2 = _exportFile.getExport("/subnet_c", deny);
 
-
         assertNotNull("Allowed host not recognized", export1);
         assertNull("Deny host not recognized", export2);
     }
@@ -101,7 +100,7 @@ public class FsExportTest {
 
     @Test
     public void testSubnets_IPv6Bad() throws UnknownHostException {
-        FsExport export = _exportFile.getExport("/subnet_ipv6",  InetAddress.getByName("ae80::21c:c0ff:fea0:caf4"));
+        FsExport export = _exportFile.getExport("/subnet_ipv6", InetAddress.getByName("ae80::21c:c0ff:fea0:caf4"));
         assertNull("Deny ipv6 not recognized", export);
     }
 
@@ -157,14 +156,14 @@ public class FsExportTest {
 
     @Test
     public void testWithDcap() throws UnknownHostException {
-	FsExport export = _exportFile.getExport("/with_dcap", InetAddress.getByName("192.169.2.2"));
-	assertTrue("dcap should be default option", export.isWithDcap());
+        FsExport export = _exportFile.getExport("/with_dcap", InetAddress.getByName("192.169.2.2"));
+        assertTrue("dcap should be default option", export.isWithDcap());
     }
 
     @Test
     public void testWithoutDcap() throws UnknownHostException {
-	FsExport export = _exportFile.getExport("/without_dcap", InetAddress.getByName("192.169.2.2"));
-	assertFalse("dcap is not disabled", export.isWithDcap());
+        FsExport export = _exportFile.getExport("/without_dcap", InetAddress.getByName("192.169.2.2"));
+        assertFalse("dcap is not disabled", export.isWithDcap());
     }
 
     @Test
@@ -208,6 +207,30 @@ public class FsExportTest {
     }
 
     @Test
+    public void testWithDelegations() throws UnknownHostException {
+        FsExport export = _exportFile.getExport("/export_with_deleg", InetAddress.getByName("192.168.1.1"));
+        assertTrue(export.isWithDelegations());
+    }
+
+    @Test
+    public void testWithoutDelegations() throws UnknownHostException {
+        FsExport export = _exportFile.getExport("/export_without_deleg", InetAddress.getByName("192.168.1.1"));
+        assertFalse(export.isWithDelegations());
+    }
+
+    @Test
+    public void testWithoutDelegationsAlternativeSpelling() throws UnknownHostException {
+        FsExport export = _exportFile.getExport("/export_without_deleg_alt", InetAddress.getByName("192.168.1.1"));
+        assertFalse(export.isWithDelegations());
+    }
+
+    @Test
+    public void testDelegationsDefault() throws UnknownHostException {
+        FsExport export = _exportFile.getExport("/export_default_deleg", InetAddress.getByName("192.168.1.1"));
+        assertTrue(export.isWithDelegations());
+    }
+
+    @Test
     public void testExplicitExportForLocalhost() throws Exception {
         FsExport export = _exportFile.getExport("/", InetAddress.getByName("127.0.0.1"));
         assertNull("localhost must not be able to access without explicit intry", export);
@@ -216,9 +239,10 @@ public class FsExportTest {
     @Test
     public void testEntrySorting() throws Exception {
 
-        ExportFile exportFile  = new ExportFile(ClassLoader.getSystemResource("org/dcache/nfs/exports.unsorted").toURI());
+        ExportFile exportFile = new ExportFile(ClassLoader.getSystemResource("org/dcache/nfs/exports.unsorted")
+                .toURI());
         String[] sortedEntries = new String[] {
-            "10.0.0.1", "10.0.0.0/24", "10.0.0.0/16", "10.0.0.0/8"
+                "10.0.0.1", "10.0.0.0/24", "10.0.0.0/16", "10.0.0.0/8"
         };
 
         String[] unsortedEntries = exportFile.exports(InetAddress.getByName("10.0.0.1"))
@@ -230,28 +254,28 @@ public class FsExportTest {
 
     @Test
     public void testLyoutTypeOptions() throws Exception {
-	FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.1.1"));
+        FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.1.1"));
 
-	assertEquals("invalid number of returned layouts", 1, export.getLayoutTypes().size());
-	assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(0));
+        assertEquals("invalid number of returned layouts", 1, export.getLayoutTypes().size());
+        assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(0));
     }
 
     @Test
     public void testLyoutTypeOrder1() throws Exception {
-	FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.2.1"));
+        FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.2.1"));
 
-	assertEquals("invalid number of returned layouts", 2, export.getLayoutTypes().size());
-	assertEquals("wrong layout type", layouttype4.LAYOUT4_FLEX_FILES, export.getLayoutTypes().get(0));
-	assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(1));
+        assertEquals("invalid number of returned layouts", 2, export.getLayoutTypes().size());
+        assertEquals("wrong layout type", layouttype4.LAYOUT4_FLEX_FILES, export.getLayoutTypes().get(0));
+        assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(1));
     }
 
     @Test
     public void testLyoutTypeOrder2() throws Exception {
-	FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.3.1"));
+        FsExport export = _exportFile.getExport("/layouttypes", InetAddress.getByName("172.16.3.1"));
 
-	assertEquals("invalid number of returned layouts", 2, export.getLayoutTypes().size());
-	assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(0));
-	assertEquals("wrong layout type", layouttype4.LAYOUT4_FLEX_FILES, export.getLayoutTypes().get(1));
+        assertEquals("invalid number of returned layouts", 2, export.getLayoutTypes().size());
+        assertEquals("wrong layout type", layouttype4.LAYOUT4_NFSV4_1_FILES, export.getLayoutTypes().get(0));
+        assertEquals("wrong layout type", layouttype4.LAYOUT4_FLEX_FILES, export.getLayoutTypes().get(1));
     }
 
     @Test

@@ -19,11 +19,8 @@
  */
 package org.dcache.nfs;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
-import com.google.common.net.InetAddresses;
-import com.google.common.net.InternetDomainName;
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -33,7 +30,11 @@ import java.util.stream.Collectors;
 
 import org.dcache.nfs.v4.xdr.layouttype4;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
+import com.google.common.net.InetAddresses;
+import com.google.common.net.InternetDomainName;
 
 public class FsExport {
 
@@ -55,11 +56,7 @@ public class FsExport {
     }
 
     public enum Sec {
-        NONE,
-        SYS,
-        KRB5,
-        KRB5I,
-        KRB5P
+        NONE, SYS, KRB5, KRB5I, KRB5P
     }
 
     private final String _path;
@@ -75,6 +72,7 @@ public class FsExport {
     private final boolean _allRoot;
     private final int _index;
     private final boolean _withPnfs;
+    private final boolean _withDelegations;
     private final List<layouttype4> _layoutTypes;
     private final boolean _requirePrivilegedClientPort;
 
@@ -84,30 +82,24 @@ public class FsExport {
      *
      * <b>single host</b>
      * <p>
-     * This is the most common format. You may specify a host either by an
-     * abbreviated name recognized be the resolver, the fully qualified domain
-     * name, or an IP address.
+     * This is the most common format. You may specify a host either by an abbreviated name recognized be the resolver,
+     * the fully qualified domain name, or an IP address.
      * <p>
      *
      * <b>wildcards</b>
      * <p>
-     * Machine names may contain the wildcard characters * and ?. This can be
-     * used to make the exports file more compact; for instance, .cs.foo.edu
-     * matches all hosts in the domain cs.foo.edu. As these characters also
-     * match the dots in a domain name, the given pattern will also match all
-     * hosts within any subdomain of cs.foo.edu.
+     * Machine names may contain the wildcard characters * and ?. This can be used to make the exports file more
+     * compact; for instance, .cs.foo.edu matches all hosts in the domain cs.foo.edu. As these characters also match the
+     * dots in a domain name, the given pattern will also match all hosts within any subdomain of cs.foo.edu.
      * <p>
      *
      * <b>IP networks</b>
      * <p>
-     * You can also export directories to all hosts on an IP (sub-) network
-     * simultaneously. This is done by specifying an IP address and netmask pair
-     * as address/netmask where the netmask can be specified in dotted-decimal
-     * format, or as a contiguous mask length (for example, either
-     * `/255.255.252.0' or `/22' appended to the network base address result in
-     * identical subnetworks with 10 bits of host). Wildcard characters
-     * generally do not work on IP addresses, though they may work by accident
-     * when reverse DNS lookups fail.
+     * You can also export directories to all hosts on an IP (sub-) network simultaneously. This is done by specifying
+     * an IP address and netmask pair as address/netmask where the netmask can be specified in dotted-decimal format, or
+     * as a contiguous mask length (for example, either `/255.255.252.0' or `/22' appended to the network base address
+     * result in identical subnetworks with 10 bits of host). Wildcard characters generally do not work on IP addresses,
+     * though they may work by accident when reverse DNS lookups fail.
      * <p>
      *
      *
@@ -124,9 +116,10 @@ public class FsExport {
         _allSquash = builder.hasAllSquash();
         _anonUid = builder.getAnonUid();
         _anonGid = builder.getAnonGid();
-	_withDcap = builder.isWithDcap();
+        _withDcap = builder.isWithDcap();
         _allRoot = builder.isAllRoot();
         _withPnfs = builder.isWithPnfs();
+        _withDelegations = builder.isWithDelegations();
         _index = getExportIndex(_path);
 	_layoutTypes = ImmutableList.copyOf(builder.getLayoutTypes());
         _requirePrivilegedClientPort = builder.isPrivilegedClientPortRequired();
@@ -134,7 +127,7 @@ public class FsExport {
 
     public static int getExportIndex(String path) {
         int index = 1;
-        for (String s: Splitter.on('/').omitEmptyStrings().split(path) ) {
+        for (String s : Splitter.on('/').omitEmptyStrings().split(path)) {
             index = 31 * index + s.hashCode();
         }
         return index;
@@ -161,28 +154,29 @@ public class FsExport {
                 .append("sec=").append(_sec)
                 .append(",")
                 .append(_requirePrivilegedClientPort ? "secure" : "insecure")
-		.append(',')
-		.append(_withDcap ? "dcap" : "no_dcap")
                 .append(',')
-                .append(_withPnfs ? "pnfs" : "nopnfs");
+                .append(_withDcap ? "dcap" : "no_dcap")
+                .append(',')
+                .append(_withPnfs ? "pnfs" : "nopnfs")
+                .append(',')
+                .append(_withDelegations ? "deleg" : "nodeleg");
         if (_allSquash) {
             sb.append(",all_squash");
         }
-	if (!_layoutTypes.isEmpty()) {
-	    sb.append(
-		_layoutTypes.stream()
-		.map(Object::toString)
-		.map(s -> s.substring("LAYOUT4_".length()))
-		.map(String::toLowerCase)
-		.collect(Collectors.joining(":", ",lt=", ""))
-	    );
-	}
+        if (!_layoutTypes.isEmpty()) {
+            sb.append(
+                    _layoutTypes.stream()
+                            .map(Object::toString)
+                            .map(s -> s.substring("LAYOUT4_".length()))
+                            .map(String::toLowerCase)
+                            .collect(Collectors.joining(":", ",lt=", "")));
+        }
         sb.append(',')
-            .append("anonuid=")
-            .append(_anonUid);
+                .append("anonuid=")
+                .append(_anonUid);
         sb.append(',')
-            .append("anongid=")
-            .append(_anonGid);
+                .append("anongid=")
+                .append(_anonGid);
         sb.append(')')
                 .append(':')
                 .append("idx=")
@@ -233,7 +227,7 @@ public class FsExport {
     }
 
     public boolean isWithDcap() {
-	return _withDcap;
+        return _withDcap;
     }
 
     public boolean isAllRoot() {
@@ -242,6 +236,15 @@ public class FsExport {
 
     public boolean isWithPnfs() {
         return _withPnfs;
+    }
+
+    /**
+     * Check whether the server may hand out open delegations to clients matching this export.
+     *
+     * @return true if delegations may be granted.
+     */
+    public boolean isWithDelegations() {
+        return _withDelegations;
     }
 
     public boolean isPrivilegedClientPortRequired() {
@@ -254,7 +257,7 @@ public class FsExport {
      * @return an ordered list of layout types to be offerent to the client.
      */
     public List<layouttype4> getLayoutTypes() {
-	return _layoutTypes;
+        return _layoutTypes;
     }
 
     /**
@@ -283,6 +286,7 @@ public class FsExport {
         hash = 83 * hash + (this._allRoot ? 1 : 0);
         hash = 83 * hash + this._index;
         hash = 83 * hash + (this._withPnfs ? 1 : 0);
+        hash = 83 * hash + (this._withDelegations ? 1 : 0);
         hash = 83 * hash + Objects.hashCode(this._layoutTypes);
         return hash;
     }
@@ -323,6 +327,9 @@ public class FsExport {
         if (this._withPnfs != other._withPnfs) {
             return false;
         }
+        if (this._withDelegations != other._withDelegations) {
+            return false;
+        }
         if (!Objects.equals(this._path, other._path)) {
             return false;
         }
@@ -344,7 +351,6 @@ public class FsExport {
         return true;
     }
 
-
     public static class FsExportBuilder {
 
         private String _client = "*";
@@ -355,10 +361,11 @@ public class FsExport {
         private boolean allSquash = false;
         private int _anonUid = DEFAULT_ANON_UID;
         private int _anonGid = DEFAULT_ANON_GID;
-	private boolean _withDcap = true;
+        private boolean _withDcap = true;
         private boolean _allRoot = false;
         private boolean _withPnfs = true;
-	private final List<layouttype4> _layoutTypes = new ArrayList<>();
+        private boolean _withDelegations = true;
+        private final List<layouttype4> _layoutTypes = new ArrayList<>();
         private boolean _requirePrivilegedClientPort;
 
         public FsExportBuilder forClient(String client) {
@@ -432,15 +439,15 @@ public class FsExport {
             return this;
         }
 
-	public FsExportBuilder withDcap() {
-	    _withDcap = true;
-	    return this;
-	}
+        public FsExportBuilder withDcap() {
+            _withDcap = true;
+            return this;
+        }
 
-	public FsExportBuilder withoutDcap() {
-	    _withDcap = false;
-	    return this;
-	}
+        public FsExportBuilder withoutDcap() {
+            _withDcap = false;
+            return this;
+        }
 
         public FsExportBuilder withAllRoot() {
             _allRoot = true;
@@ -457,10 +464,20 @@ public class FsExport {
             return this;
         }
 
-	public FsExportBuilder withLayoutType(layouttype4 type) {
-	    _layoutTypes.add(type);
-	    return this;
-	}
+        public FsExportBuilder withDelegations() {
+            _withDelegations = true;
+            return this;
+        }
+
+        public FsExportBuilder withoutDelegations() {
+            _withDelegations = false;
+            return this;
+        }
+
+        public FsExportBuilder withLayoutType(layouttype4 type) {
+            _layoutTypes.add(type);
+            return this;
+        }
 
         public String getClient() {
             return _client;
@@ -494,9 +511,9 @@ public class FsExport {
             return _anonGid;
         }
 
-	public boolean isWithDcap() {
-	    return _withDcap;
-	}
+        public boolean isWithDcap() {
+            return _withDcap;
+        }
 
         public boolean isAllRoot() {
             return _allRoot;
@@ -506,17 +523,20 @@ public class FsExport {
             return _withPnfs;
         }
 
-	public List<layouttype4> getLayoutTypes() {
-	    return _layoutTypes;
-	}
+        public boolean isWithDelegations() {
+            return _withDelegations;
+        }
+
+        public List<layouttype4> getLayoutTypes() {
+            return _layoutTypes;
+        }
 
         public FsExport build(String path) throws UnknownHostException {
             return new FsExport(path, this);
         }
 
         /**
-         * Check for valid host name. The allowed format is:
-         * <pre>
+         * Check for valid host name. The allowed format is: <pre>
          *   IPv4[/n]
          *   IPv6[/N]
          *   host.domain[/N]

@@ -19,15 +19,17 @@
  */
 package org.dcache.nfs.vfs;
 
-import com.google.common.cache.*;
-import com.google.common.io.BaseEncoding;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.cache.*;
+import com.google.common.io.BaseEncoding;
 
 /**
  *
@@ -50,8 +52,7 @@ public class FsCache {
 
         @Override
         public FileChannel load(Inode inode) throws IOException {
-            byte[] fid = inode.getFileId();
-            String id = BaseEncoding.base16().lowerCase().encode(fid);
+            String id = inode.getLockKey().toBase64();
             File dir = getAndCreateDirectory(id);
             File f = new File(dir, id);
             return new RandomAccessFile(f, "rw").getChannel();
@@ -79,6 +80,7 @@ public class FsCache {
             }
         }
     }
+
     private LoadingCache<Inode, FileChannel> _cache;
     private int _maxSize;
     private int _lastAccess;
@@ -95,6 +97,7 @@ public class FsCache {
     public void setLastAccess(int timeInSec) {
         _lastAccess = timeInSec;
     }
+
     public void init() {
         _cache = CacheBuilder.newBuilder()
                 .maximumSize(_maxSize)

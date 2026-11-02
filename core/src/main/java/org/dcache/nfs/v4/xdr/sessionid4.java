@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2018 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2025 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,9 +19,9 @@
  */
 package org.dcache.nfs.v4.xdr;
 
-import com.google.common.io.BaseEncoding;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HexFormat;
 
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.xdr.XdrAble;
@@ -30,34 +30,36 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
 
 public class sessionid4 implements XdrAble {
 
-    public byte [] value;
+    public byte[] value;
 
     public sessionid4() {
     }
 
-    public sessionid4(byte [] value) {
+    public sessionid4(byte[] value) {
         this.value = value;
     }
 
     public sessionid4(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         xdrDecode(xdr);
     }
 
     public void xdrEncode(XdrEncodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         xdr.xdrEncodeOpaque(value, nfs4_prot.NFS4_SESSIONID_SIZE);
     }
 
     public void xdrDecode(XdrDecodingStream xdr)
-           throws OncRpcException, IOException {
+            throws OncRpcException, IOException {
         value = xdr.xdrDecodeOpaque(nfs4_prot.NFS4_SESSIONID_SIZE);
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this)  return true;
-        if ( !(obj instanceof sessionid4 )) return false;
+        if (obj == this)
+            return true;
+        if (!(obj instanceof sessionid4))
+            return false;
 
         final sessionid4 other = (sessionid4) obj;
 
@@ -73,7 +75,7 @@ public class sessionid4 implements XdrAble {
 
     @Override
     public String toString() {
-        return BaseEncoding.base16().lowerCase().encode(value);
+        return HexFormat.of().formatHex(value);
     }
 }
 // End of sessionid4.java
