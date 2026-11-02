@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 - 2021 Deutsches Elektronen-Synchroton,
+ * Copyright (c) 2009 - 2026 Deutsches Elektronen-Synchroton,
  * Member of the Helmholtz Association, (DESY), HAMBURG, GERMANY
  *
  * This library is free software; you can redistribute it and/or modify
@@ -44,9 +44,12 @@ import org.dcache.nfs.v4.xdr.LAYOUTGET4args;
 import org.dcache.nfs.v4.xdr.LAYOUTRETURN4args;
 import org.dcache.nfs.v4.xdr.LAYOUTSTATS4args;
 import org.dcache.nfs.v4.xdr.LISTXATTRS4args;
+import org.dcache.nfs.v4.xdr.LOCK4args;
 import org.dcache.nfs.v4.xdr.LOCKU4args;
 import org.dcache.nfs.v4.xdr.LOOKUP4args;
 import org.dcache.nfs.v4.xdr.OPEN4args;
+import org.dcache.nfs.v4.xdr.OPEN_CONFIRM4args;
+import org.dcache.nfs.v4.xdr.OPEN_DOWNGRADE4args;
 import org.dcache.nfs.v4.xdr.PUTFH4args;
 import org.dcache.nfs.v4.xdr.READ4args;
 import org.dcache.nfs.v4.xdr.READDIR4args;
@@ -54,6 +57,7 @@ import org.dcache.nfs.v4.xdr.RECLAIM_COMPLETE4args;
 import org.dcache.nfs.v4.xdr.REMOVE4args;
 import org.dcache.nfs.v4.xdr.REMOVEXATTR4args;
 import org.dcache.nfs.v4.xdr.SEQUENCE4args;
+import org.dcache.nfs.v4.xdr.SETATTR4args;
 import org.dcache.nfs.v4.xdr.SETXATTR4args;
 import org.dcache.nfs.v4.xdr.WRITE4args;
 import org.dcache.nfs.v4.xdr.attrlist4;
@@ -69,8 +73,10 @@ import org.dcache.nfs.v4.xdr.createmode4;
 import org.dcache.nfs.v4.xdr.createtype4;
 import org.dcache.nfs.v4.xdr.device_error4;
 import org.dcache.nfs.v4.xdr.deviceid4;
+import org.dcache.nfs.v4.xdr.exist_lock_owner4;
 import org.dcache.nfs.v4.xdr.fattr4;
 import org.dcache.nfs.v4.xdr.fattr4_mode;
+import org.dcache.nfs.v4.xdr.fattr4_mode_set_masked;
 import org.dcache.nfs.v4.xdr.fattr4_size;
 import org.dcache.nfs.v4.xdr.io_info4;
 import org.dcache.nfs.v4.xdr.layoutiomode4;
@@ -80,6 +86,10 @@ import org.dcache.nfs.v4.xdr.layoutreturn_type4;
 import org.dcache.nfs.v4.xdr.layouttype4;
 import org.dcache.nfs.v4.xdr.layoutupdate4;
 import org.dcache.nfs.v4.xdr.length4;
+import org.dcache.nfs.v4.xdr.lock_owner4;
+import org.dcache.nfs.v4.xdr.locker4;
+import org.dcache.nfs.v4.xdr.mode4;
+import org.dcache.nfs.v4.xdr.mode_masked4;
 import org.dcache.nfs.v4.xdr.netloc4;
 import org.dcache.nfs.v4.xdr.newoffset4;
 import org.dcache.nfs.v4.xdr.newtime4;
@@ -95,6 +105,7 @@ import org.dcache.nfs.v4.xdr.offset4;
 import org.dcache.nfs.v4.xdr.open_claim4;
 import org.dcache.nfs.v4.xdr.open_claim_type4;
 import org.dcache.nfs.v4.xdr.open_owner4;
+import org.dcache.nfs.v4.xdr.open_to_lock_owner4;
 import org.dcache.nfs.v4.xdr.openflag4;
 import org.dcache.nfs.v4.xdr.opentype4;
 import org.dcache.nfs.v4.xdr.seqid4;
@@ -288,6 +299,48 @@ public class CompoundBuilder {
         args.attr_request = bitmap4.of(attrs);
         op.argop = nfs_opnum4.OP_GETATTR;
         op.opgetattr = args;
+        ops.add(op);
+        return this;
+    }
+
+    /**
+     * Plain SETATTR of FATTR4_MODE with an anonymous (all-zero) stateid.
+     */
+    public CompoundBuilder withSetattr(int mode) {
+        nfs_argop4 op = new nfs_argop4();
+        SETATTR4args args = new SETATTR4args();
+
+        args.obj_attributes = new fattr4();
+        args.obj_attributes.attr_vals = new attrlist4();
+        args.obj_attributes.attr_vals.value = encodeAttrs(new fattr4_mode(mode));
+        args.obj_attributes.attrmask = bitmap4.of(nfs4_prot.FATTR4_MODE);
+        args.stateid = Stateids.ZeroStateId();
+
+        op.argop = nfs_opnum4.OP_SETATTR;
+        op.opsetattr = args;
+        ops.add(op);
+        return this;
+    }
+
+    /**
+     * SETATTR of FATTR4_MODE_SET_MASKED with an anonymous (all-zero) stateid.
+     */
+    public CompoundBuilder withSetattrMasked(int valueToSet, int maskBits) {
+        nfs_argop4 op = new nfs_argop4();
+        SETATTR4args args = new SETATTR4args();
+
+        mode_masked4 masked = new mode_masked4();
+        masked.mm_value_to_set = new mode4(valueToSet);
+        masked.mm_mask_bits = new mode4(maskBits);
+
+        args.obj_attributes = new fattr4();
+        args.obj_attributes.attr_vals = new attrlist4();
+        args.obj_attributes.attr_vals.value = encodeAttrs(new fattr4_mode_set_masked(masked));
+        args.obj_attributes.attrmask = bitmap4.of(nfs4_prot.FATTR4_MODE_SET_MASKED);
+        args.stateid = Stateids.ZeroStateId();
+
+        op.argop = nfs_opnum4.OP_SETATTR;
+        op.opsetattr = args;
         ops.add(op);
         return this;
     }
@@ -605,6 +658,72 @@ public class CompoundBuilder {
         op.oplocku.locktype = type;
         op.oplocku.offset = new offset4(offset);
         op.oplocku.length = new length4(length);
+        ops.add(op);
+        return this;
+    }
+
+    public CompoundBuilder withOpenConfirm(stateid4 stateid, int seqid) {
+        nfs_argop4 op = new nfs_argop4();
+        op.argop = nfs_opnum4.OP_OPEN_CONFIRM;
+        op.opopen_confirm = new OPEN_CONFIRM4args();
+        op.opopen_confirm.open_stateid = stateid;
+        op.opopen_confirm.seqid = new seqid4(seqid);
+        ops.add(op);
+        return this;
+    }
+
+    public CompoundBuilder withOpenDowngrade(stateid4 stateid, int seqid, int shareAccess, int shareDeny) {
+        nfs_argop4 op = new nfs_argop4();
+        op.argop = nfs_opnum4.OP_OPEN_DOWNGRADE;
+        op.opopen_downgrade = new OPEN_DOWNGRADE4args();
+        op.opopen_downgrade.open_stateid = stateid;
+        op.opopen_downgrade.seqid = new seqid4(seqid);
+        op.opopen_downgrade.share_access = new uint32_t(shareAccess);
+        op.opopen_downgrade.share_deny = new uint32_t(shareDeny);
+        ops.add(op);
+        return this;
+    }
+
+    public CompoundBuilder withLock(int type, long offset, long length, stateid4 openStateid, int openSeqid,
+            clientid4 clientid, byte[] lockOwner, int lockSeqid) {
+
+        open_to_lock_owner4 openOwner = new open_to_lock_owner4();
+        openOwner.open_stateid = openStateid;
+        openOwner.open_seqid = new seqid4(openSeqid);
+        openOwner.lock_seqid = new seqid4(lockSeqid);
+        openOwner.lock_owner = new lock_owner4();
+        openOwner.lock_owner.clientid = clientid;
+        openOwner.lock_owner.owner = lockOwner;
+
+        locker4 locker = new locker4();
+        locker.new_lock_owner = true;
+        locker.open_owner = openOwner;
+
+        return withLock(type, offset, length, locker);
+    }
+
+    public CompoundBuilder withLock(int type, long offset, long length, stateid4 lockStateid, int lockSeqid) {
+
+        exist_lock_owner4 lockOwner = new exist_lock_owner4();
+        lockOwner.lock_stateid = lockStateid;
+        lockOwner.lock_seqid = new seqid4(lockSeqid);
+
+        locker4 locker = new locker4();
+        locker.new_lock_owner = false;
+        locker.lock_owner = lockOwner;
+
+        return withLock(type, offset, length, locker);
+    }
+
+    private CompoundBuilder withLock(int type, long offset, long length, locker4 locker) {
+        nfs_argop4 op = new nfs_argop4();
+        op.argop = nfs_opnum4.OP_LOCK;
+        op.oplock = new LOCK4args();
+        op.oplock.locktype = type;
+        op.oplock.reclaim = false;
+        op.oplock.offset = new offset4(offset);
+        op.oplock.length = new length4(length);
+        op.oplock.locker = locker;
         ops.add(op);
         return this;
     }
